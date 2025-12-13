@@ -176,6 +176,7 @@ def create_plot(func_str, bounds, iterations, x_min, f_min):
         str: Base64 encoded PNG image
     """
     import matplotlib.pyplot as plt
+    import matplotlib.cm as cm
     from sympy import symbols, sympify, lambdify
     import io
     import base64
@@ -207,7 +208,7 @@ def create_plot(func_str, bounds, iterations, x_min, f_min):
             
             # Shade interval
             ax.axvspan(iter_a, iter_b, alpha=alpha*0.5, 
-                      color=plt.cm.viridis(color_intensity))
+                      color=cm.get_cmap('viridis')(color_intensity))
             
             # Mark x1, x2 points
             if i < min(5, num_iters):  # Show only first few for clarity
