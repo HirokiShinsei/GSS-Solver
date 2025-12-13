@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSS Solver - Golden Section Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <!-- MathQuill for live math rendering -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gss-blue-dark': '#003c7d',
+                        'gss-blue': '#0055b8',
+                        'gss-blue-light': '#4da3ff',
+                        'gss-blue-accent': '#0073e6',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Glassmorphism effects */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(0, 115, 230, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(0, 115, 230, 0.5);
+            box-shadow: 0 0 0 3px rgba(0, 115, 230, 0.1);
+            outline: none;
+        }
+
+        /* Premium Glass Button */
+        .glass-button {
+            position: relative;
+            background: linear-gradient(135deg, rgba(0, 60, 125, 0.85) 0%, rgba(0, 115, 230, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 60, 125, 0.25),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .glass-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.2), 
+                transparent);
+            transition: left 0.6s ease;
+        }
+
+        .glass-button:hover::before {
+            left: 100%;
+        }
+
+        .glass-button:hover {
+            background: linear-gradient(135deg, rgba(0, 85, 184, 0.9) 0%, rgba(77, 163, 255, 0.95) 100%);
+            box-shadow: 0 12px 48px rgba(0, 115, 230, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .glass-button:active {
+            transform: translateY(0);
+        }
+
+        .glass-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Small glass button for quick insert */
+        .quick-insert-btn {
+            background: rgba(0, 115, 230, 0.08);
+            border: 1px solid rgba(0, 115, 230, 0.2);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #0073e6;
+            cursor: pointer;
+        }
+
+        .quick-insert-btn:hover {
+            background: rgba(0, 115, 230, 0.15);
+            border-color: rgba(0, 115, 230, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Navigation */
+        .nav-glass {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid rgba(0, 115, 230, 0.08);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06),
+                        0 1px 0 rgba(255, 255, 255, 0.5) inset;
+        }
+
+        .logo-placeholder {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, rgba(0, 60, 125, 0.1) 0%, rgba(0, 115, 230, 0.15) 100%);
+            border: 2px dashed rgba(0, 115, 230, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link {
+            position: relative;
+            padding: 0.625rem 1.25rem;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(0, 115, 230, 0.08) 0%, rgba(77, 163, 255, 0.12) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-link:hover::before {
+            opacity: 1;
+        }
+
+        .nav-link.active {
+            color: #0073e6;
+            font-weight: 600;
+        }
+
+        .nav-link.active::before {
+            opacity: 1;
+        }
+
+        /* Background gradient */
+        .bg-gradient-soft {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #f0f9ff 100%);
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #003c7d 0%, #0073e6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Table styling */
+        .iteration-table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .iteration-table th {
+            background: linear-gradient(135deg, rgba(0, 60, 125, 0.9) 0%, rgba(0, 115, 230, 0.95) 100%);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            text-align: center;
+            font-size: 0.875rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .iteration-table th:first-child {
+            border-top-left-radius: 12px;
+        }
+
+        .iteration-table th:last-child {
+            border-top-right-radius: 12px;
+        }
+
+        .iteration-table td {
+            padding: 0.75rem 1rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.6);
+            border-bottom: 1px solid rgba(0, 115, 230, 0.1);
+            font-size: 0.875rem;
+        }
+
+        .iteration-table tr:hover td {
+            background: rgba(77, 163, 255, 0.1);
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* History item */
+        .history-item {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 115, 230, 0.15);
+            border-radius: 12px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 115, 230, 0.3);
+            transform: translateX(4px);
+        }
+
+        /* MathQuill styling - FIXED */
+        #mathInput {
+            min-height: 60px;
+            display: block;
+            width: 100%;
+        }
+
+        .mq-editable-field {
+            border: 1.5px solid rgba(0, 115, 230, 0.2) !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            backdrop-filter: blur(10px);
+            padding: 0.75rem !important;
+            border-radius: 12px !important;
+            font-size: 1.25rem !important;
+            min-height: 60px !important;
+            transition: all 0.3s ease;
+            cursor: text !important;
+        }
+
+        .mq-editable-field.mq-focused {
+            border-color: rgba(0, 115, 230, 0.5) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            box-shadow: 0 0 0 3px rgba(0, 115, 230, 0.1) !important;
+        }
+
+        .mq-math-mode .mq-root-block {
+            padding: 0.5rem !important;
+        }
+
+        /* Scrollbar styling */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 115, 230, 0.05);
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 115, 230, 0.3);
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 115, 230, 0.5);
+        }
+
+        /* Side panel for mobile */
+        .side-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0);
+            backdrop-filter: blur(0px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .side-panel-overlay.active {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            pointer-events: auto;
+        }
+
+        .side-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 280px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(30px);
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 101;
+        }
+
+        .side-panel.active {
+            right: 0;
+        }
+
+        body.panel-open {
+            overflow: hidden;
+        }
+
+        /* Info badge */
+        .info-badge {
+            background: rgba(0, 115, 230, 0.08);
+            color: #0073e6;
+            padding: 0.125rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+
+        /* Guide box */
+        .guide-box {
+            background: rgba(77, 163, 255, 0.08);
+            border: 1px solid rgba(77, 163, 255, 0.2);
+            border-radius: 10px;
+            padding: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-soft antialiased">
+    <!-- Navigation Bar -->
+    <nav class="nav-glass sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex-shrink-0">
+                    <a href="index.html" class="flex items-center group">
+                        <div class="logo-placeholder">
+                            <svg class="w-6 h-6 text-gss-blue-accent opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="index.html#home" class="nav-link text-gray-700">
+                        <span class="relative z-10">Home</span>
+                    </a>
+                    <a href="solver.html" class="nav-link active text-gray-700">
+                        <span class="relative z-10">Solver</span>
+                    </a>
+                    <a href="index.html#about" class="nav-link text-gray-700">
+                        <span class="relative z-10">About Us</span>
+                    </a>
+                </div>
+
+                <button class="md:hidden p-2.5 rounded-xl bg-white/60 backdrop-blur-md border border-gss-blue-accent/10" onclick="togglePanel()">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Side Panel -->
+    <div class="side-panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+    <div class="side-panel" id="sidePanel">
+        <div class="p-6 border-b border-gss-blue-accent/10 flex justify-between items-center">
+            <div class="logo-placeholder">
+                <svg class="w-6 h-6 text-gss-blue-accent opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <button onclick="closePanel()" class="p-2 rounded-lg bg-white/60 backdrop-blur-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 flex flex-col gap-2">
+            <a href="index.html#home" class="nav-link text-gray-700" onclick="closePanel()">
+                <span class="relative z-10">Home</span>
+            </a>
+            <a href="solver.html" class="nav-link active text-gray-700" onclick="closePanel()">
+                <span class="relative z-10">Solver</span>
+            </a>
+            <a href="index.html#about" class="nav-link text-gray-700" onclick="closePanel()">
+                <span class="relative z-10">About Us</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold gradient-text mb-2">Golden Section Search Solver</h1>
+            <p class="text-gray-600">Find the minimum of any unimodal function without derivatives</p>
+        </div>
+
+        <!-- Main Grid Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Solver Configuration -->
+            <div class="lg:col-span-1">
+                <div class="glass-card rounded-3xl p-6 sticky top-24">
+                    <h2 class="text-2xl font-bold gradient-text mb-6">Configuration</h2>
+                    
+                    <form id="solverForm" class="space-y-5">
+                        <!-- Function Input -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Function f(x)
+                            </label>
+                            <span id="mathInput"></span>
+                            
+                            <!-- Quick Insert Buttons -->
+                            <div class="mb-3 mt-3">
+                                <p class="text-xs font-semibold text-gray-600 mb-2">Quick Insert:</p>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^2')">x²</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^3')">x³</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sqrt')">√</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sin')">sin</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\cos')">cos</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\tan')">tan</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('e^x')">eˣ</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\log')">log</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\frac')">a/b</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Format Guide -->
+                            <div class="guide-box">
+                                <p class="text-xs font-semibold text-gss-blue-accent mb-2">💡 Formatting Guide:</p>
+                                <div class="text-xs text-gray-700 space-y-1">
+                                    <div><span class="info-badge">x^2</span> or <span class="info-badge">x**2</span> Power/Exponent</div>
+                                    <div><span class="info-badge">7/8</span> Simple fraction (auto-converts)</div>
+                                    <div><span class="info-badge">\sqrt</span> then type - Square root</div>
+                                    <div><span class="info-badge">\frac</span> then type - Proper fraction</div>
+                                    <div><span class="info-badge">\sin</span> <span class="info-badge">\cos</span> Trig functions</div>
+                                    <div><span class="info-badge">*</span> Multiplication (can be implicit: 2x)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interval Bounds -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Left Bound (a)
+                                </label>
+                                <input type="number" id="leftBound" step="any" value="-2" 
+                                    class="w-full glass-input rounded-xl px-4 py-2.5 text-gray-900 font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Right Bound (b)
+                                </label>
+                                <input type="number" id="rightBound" step="any" value="2" 
+                                    class="w-full glass-input rounded-xl px-4 py-2.5 text-gray-900 font-medium">
+                            </div>
+                        </div>
+
+                        <!-- Tolerance -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Tolerance (ε)
+                            </label>
+                            <input type="number" id="tolerance" step="any" value="0.0001" min="0.000001" max="1"
+                                class="w-full glass-input rounded-xl px-4 py-2.5 text-gray-900 font-medium"
+                                placeholder="e.g., 0.0001">
+                            <p class="mt-1 text-xs text-gray-500">Suggested: 0.0001 to 0.000001</p>
+                        </div>
+
+                        <!-- Mode Selection -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Optimization Mode
+                            </label>
+                            <select id="mode" class="w-full glass-input rounded-xl px-4 py-2.5 text-gray-900 font-medium">
+                                <option value="minimize" selected>Minimization (Standard GSS)</option>
+                                <option value="maximize">Maximization</option>
+                            </select>
+                        </div>
+
+                        <!-- Run Button -->
+                        <button type="submit" id="runButton" 
+                            class="w-full glass-button text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2">
+                            <span id="buttonText">Run Golden Section Search</span>
+                            <svg id="buttonIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Clear Button -->
+                        <button type="button" onclick="clearResults()" 
+                            class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl transition-colors">
+                            Clear Results
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results and Graph -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Results Card -->
+                <div class="glass-card rounded-3xl p-6">
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Results</h2>
+                    <div id="resultsContent">
+                        <div class="text-center py-12 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                            <p class="text-lg">No results yet. Run the solver to see results.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graph Card -->
+                <div class="glass-card rounded-3xl p-6">
+                    <h2 class="text-2xl font-bold gradient-text mb-4">Interactive Graph</h2>
+                    <div id="graphContainer" class="bg-white/50 rounded-2xl p-4 min-h-[400px]">
+                        <div class="flex items-center justify-center h-[400px] text-gray-500">
+                            <div class="text-center">
+                                <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                                </svg>
+                                <p class="text-lg">Graph will appear here after running the solver</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Iteration Table Card - Full Width -->
+        <div id="iterationTableCard" class="glass-card rounded-3xl p-6 mb-6 hidden">
+            <h2 class="text-2xl font-bold gradient-text mb-4">Iteration Details</h2>
+            <div class="overflow-auto custom-scrollbar" style="max-height: 500px;">
+                <table id="iterationTable" class="iteration-table w-full">
+                    <thead>
+                        <tr>
+                            <th>Iteration (k)</th>
+                            <th>Left (a)</th>
+                            <th>Right (b)</th>
+                            <th>x₁</th>
+                            <th>x₂</th>
+                            <th>f(x₁)</th>
+                            <th>f(x₂)</th>
+                            <th>Interval |b-a|</th>
+                        </tr>
+                    </thead>
+                    <tbody id="iterationTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="glass-card rounded-3xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold gradient-text">Session History</h2>
+                <button onclick="clearHistory()" class="text-sm text-gray-600 hover:text-gss-blue-accent transition-colors">
+                    Clear History
+                </button>
+            </div>
+            <div id="historyContainer" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                <p class="text-gray-500 text-center py-8">No computations yet in this session</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mathField;
+        let history = [];
+
+        // Initialize MathQuill when page loads
+        $(document).ready(function() {
+            const MQ = MathQuill.getInterface(2);
+            const mathFieldSpan = document.getElementById('mathInput');
+            
+            mathField = MQ.MathField(mathFieldSpan, {
+                spaceBehavesLikeTab: true,
+                leftRightIntoCmdGoes: 'up',
+                restrictMismatchedBrackets: true,
+                sumStartsWithNEquals: true,
+                supSubsRequireOperand: true,
+                charsThatBreakOutOfSupSub: '+-=<>',
+                autoSubscriptNumerals: true,
+                autoCommands: 'pi theta sqrt sum prod alpha beta gamma delta',
+                autoOperatorNames: 'sin cos tan sec csc cot sinh cosh tanh ln log exp',
+                handlers: {
+                    edit: function() {
+                        // Optional: handle edits
+                    }
+                }
+            });
+            
+            // Set default function
+            mathField.latex('x^4-3x^2+x+1');
+            mathField.focus();
+        });
+
+        function insertSymbol(latex) {
+            if (mathField) {
+                mathField.cmd(latex);
+                mathField.focus();
+            }
+        }
+
+        // Form submission
+        document.getElementById('solverForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await runSolver();
+        });
+
+        async function runSolver() {
+            const button = document.getElementById('runButton');
+            const buttonText = document.getElementById('buttonText');
+            const buttonIcon = document.getElementById('buttonIcon');
+            
+            // Get form values
+            const funcLatex = mathField.latex();
+            const leftBound = parseFloat(document.getElementById('leftBound').value);
+            const rightBound = parseFloat(document.getElementById('rightBound').value);
+            const tolerance = parseFloat(document.getElementById('tolerance').value);
+            const mode = document.getElementById('mode').value;
+
+            // Validate inputs
+            if (!funcLatex || isNaN(leftBound) || isNaN(rightBound) || isNaN(tolerance)) {
+                alert('Please fill in all fields correctly');
+                return;
+            }
+
+            if (leftBound >= rightBound) {
+                alert('Left bound must be less than right bound');
+                return;
+            }
+
+            if (tolerance <= 0) {
+                alert('Tolerance must be greater than 0');
+                return;
+            }
+
+            // Disable button and show loading
+            button.disabled = true;
+            buttonText.textContent = 'Computing...';
+            buttonIcon.outerHTML = '<div class="loading-spinner"></div>';
+
+            try {
+                // Convert LaTeX to evaluable expression
+                let funcStr = latexToJs(funcLatex);
+                
+                console.log('Original LaTeX:', funcLatex);
+                console.log('Converted JS:', funcStr);
+                
+                // If maximization, we'll negate the function
+                if (mode === 'maximize') {
+                    funcStr = `-1*(${funcStr})`;
+                }
+
+                // Run GSS algorithm
+                const result = await goldenSectionSearch(funcStr, leftBound, rightBound, tolerance);
+                
+                // If maximization, negate the result back
+                if (mode === 'maximize') {
+                    result.f_min = -result.f_min;
+                }
+
+                // Display results
+                displayResults(result, funcLatex, mode);
+                
+                // Plot graph
+                plotGraph(latexToJs(funcLatex), leftBound, rightBound, result, mode);
+                
+                // Add to history
+                addToHistory({
+                    function: funcLatex,
+                    bounds: [leftBound, rightBound],
+                    tolerance: tolerance,
+                    mode: mode,
+                    result: result,
+                    timestamp: new Date()
+                });
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                console.error(error);
+            } finally {
+                button.disabled = false;
+                buttonText.textContent = 'Run Golden Section Search';
+                document.querySelector('.loading-spinner').outerHTML = `
+                    <svg id="buttonIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                `;
+            }
+        }
+
+        function latexToJs(latex) {
+            let js = latex
+                // Remove spaces
+                .replace(/\s+/g, '')
+                // Convert common functions
+                .replace(/\\sin/g, 'Math.sin')
+                .replace(/\\cos/g, 'Math.cos')
+                .replace(/\\tan/g, 'Math.tan')
+                .replace(/\\log/g, 'Math.log')
+                .replace(/\\ln/g, 'Math.log')
+                // Convert sqrt
+                .replace(/\\sqrt{([^}]*)}/g, 'Math.sqrt($1)')
+                .replace(/\\sqrt\[([^\]]*)\]{([^}]*)}/g, 'Math.pow($2,1/$1)') // nth root
+                .replace(/\\sqrt([^{])/g, 'Math.sqrt($1)') // Simple sqrt
+                // Convert fractions - HANDLES BOTH \frac{}{} AND simple division
+                .replace(/\\frac{([^}]*)}{([^}]*)}/g, '(($1)/($2))')
+                // Simple fractions like 7/8 work automatically
+                // Remove LaTeX braces that aren't needed
+                .replace(/\\left/g, '')
+                .replace(/\\right/g, '')
+                // Convert cdot to *
+                .replace(/\\cdot/g, '*')
+                .replace(/\\times/g, '*')
+                // Handle implicit multiplication (e.g., 2x -> 2*x, )x -> )*x
+                .replace(/(\d)([a-z])/gi, '$1*$2')
+                .replace(/\)([a-z\(])/gi, ')*$1')
+                .replace(/([a-z])(\d)/gi, '$1*$2')
+                // Remove remaining backslashes
+                .replace(/\\/g, '');
+            
+            return js;
+        }
+
+        async function goldenSectionSearch(funcStr, a, b, tol) {
+            const goldenRatio = 0.381966;
+            let iterations = [];
+            let k = 0;
+            
+            // Create function evaluator
+            const evalFunc = (x) => {
+                try {
+                    // Replace x with the value
+                    let expression = funcStr.replace(/x/g, `(${x})`);
+                    return eval(expression);
+                } catch (e) {
+                    throw new Error('Invalid function expression: ' + e.message);
+                }
+            };
+
+            // Test function evaluation
+            try {
+                evalFunc(a);
+                evalFunc(b);
+            } catch (e) {
+                throw new Error('Function evaluation failed. Check your function syntax.');
+            }
+
+            while ((b - a) > tol && k < 100) {
+                k++;
+                
+                const x1 = a + (1 - goldenRatio) * (b - a);
+                const x2 = a + goldenRatio * (b - a);
+                
+                const f_x1 = evalFunc(x1);
+                const f_x2 = evalFunc(x2);
+                
+                iterations.push({
+                    k: k,
+                    a: a,
+                    b: b,
+                    x1: x1,
+                    x2: x2,
+                    f_x1: f_x1,
+                    f_x2: f_x2,
+                    interval: b - a
+                });
+                
+                if (f_x1 < f_x2) {
+                    b = x2;
+                } else {
+                    a = x1;
+                }
+            }
+            
+            const x_min = (a + b) / 2;
+            const f_min = evalFunc(x_min);
+            
+            return {
+                x_min: x_min,
+                f_min: f_min,
+                iterations: iterations,
+                num_iterations: k,
+                tolerance: tol
+            };
+        }
+
+        function displayResults(result, funcLatex, mode) {
+            const resultsDiv = document.getElementById('resultsContent');
+            const modeText = mode === 'maximize' ? 'Maximum' : 'Minimum';
+            
+            resultsDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-gss-blue-dark/10 to-gss-blue-accent/10 rounded-2xl p-6 border border-gss-blue-accent/20">
+                        <div class="text-sm text-gray-600 mb-1">Optimal Point (x*)</div>
+                        <div class="text-3xl font-bold gradient-text">${result.x_min.toFixed(6)}</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-gss-blue-accent/10 to-gss-blue-light/10 rounded-2xl p-6 border border-gss-blue-accent/20">
+                        <div class="text-sm text-gray-600 mb-1">${modeText} Value f(x*)</div>
+                        <div class="text-3xl font-bold gradient-text">${result.f_min.toFixed(6)}</div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between py-2 border-b border-gray-200">
+                        <span class="text-gray-600 font-medium">Number of Iterations:</span>
+                        <span class="font-semibold text-gray-900">${result.num_iterations}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-200">
+                        <span class="text-gray-600 font-medium">Tolerance:</span>
+                        <span class="font-semibold text-gray-900">${result.tolerance.toExponential(2)}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-200">
+                        <span class="text-gray-600 font-medium">Final Interval Width:</span>
+                        <span class="font-semibold text-gray-900">${(result.iterations[result.iterations.length - 1]?.interval || 0).toExponential(4)}</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-gray-600 font-medium">Mode:</span>
+                        <span class="font-semibold text-gray-900">${modeText}</span>
+                    </div>
+                </div>
+            `;
+
+            // Display iteration table
+            displayIterationTable(result.iterations);
+        }
+
+        function displayIterationTable(iterations) {
+            const tableBody = document.getElementById('iterationTableBody');
+            const tableCard = document.getElementById('iterationTableCard');
+            
+            tableCard.classList.remove('hidden');
+            tableBody.innerHTML = iterations.map(iter => `
+                <tr>
+                    <td class="font-semibold">${iter.k}</td>
+                    <td>${iter.a.toFixed(6)}</td>
+                    <td>${iter.b.toFixed(6)}</td>
+                    <td>${iter.x1.toFixed(6)}</td>
+                    <td>${iter.x2.toFixed(6)}</td>
+                    <td>${iter.f_x1.toFixed(6)}</td>
+                    <td>${iter.f_x2.toFixed(6)}</td>
+                    <td>${iter.interval.toExponential(4)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function plotGraph(funcStr, a, b, result, mode) {
+            const container = document.getElementById('graphContainer');
+            
+            const range = b - a;
+            const xMin = a - range * 0.2;
+            const xMax = b + range * 0.2;
+            const xValues = [];
+            const yValues = [];
+            
+            for (let x = xMin; x <= xMax; x += (xMax - xMin) / 500) {
+                xValues.push(x);
+                try {
+                    let expression = funcStr.replace(/x/g, `(${x})`);
+                    const y = eval(expression);
+                    yValues.push(y);
+                } catch (e) {
+                    yValues.push(null);
+                }
+            }
+            
+            const traces = [
+                {
+                    x: xValues,
+                    y: yValues,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'f(x)',
+                    line: { color: '#0055b8', width: 3 }
+                },
+                {
+                    x: [result.x_min],
+                    y: [result.f_min],
+                    type: 'scatter',
+                    mode: 'markers',
+                    name: mode === 'maximize' ? 'Maximum' : 'Minimum',
+                    marker: {
+                        color: '#16a34a',
+                        size: 15,
+                        symbol: 'star'
+                    }
+                }
+            ];
+            
+            const iterationsToShow = Math.min(5, result.iterations.length);
+            for (let i = 0; i < iterationsToShow; i++) {
+                const iter = result.iterations[i];
+                const opacity = 0.3 + (i / iterationsToShow) * 0.5;
+                
+                traces.push({
+                    x: [iter.x1, iter.x2],
+                    y: [iter.f_x1, iter.f_x2],
+                    type: 'scatter',
+                    mode: 'markers',
+                    name: `Iteration ${iter.k}`,
+                    marker: {
+                        color: `rgba(255, 163, 77, ${opacity})`,
+                        size: 8
+                    },
+                    showlegend: i < 3
+                });
+            }
+            
+            const layout = {
+                title: {
+                    text: mode === 'maximize' ? 'Function Maximization' : 'Function Minimization',
+                    font: { size: 18, family: 'Inter', weight: 600 }
+                },
+                xaxis: {
+                    title: 'x',
+                    gridcolor: 'rgba(0, 115, 230, 0.1)',
+                    zeroline: true
+                },
+                yaxis: {
+                    title: 'f(x)',
+                    gridcolor: 'rgba(0, 115, 230, 0.1)',
+                    zeroline: true
+                },
+                hovermode: 'closest',
+                plot_bgcolor: 'rgba(255, 255, 255, 0.5)',
+                paper_bgcolor: 'rgba(255, 255, 255, 0)',
+                margin: { t: 50, r: 50, b: 50, l: 50 },
+                font: { family: 'Inter' }
+            };
+            
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+                displaylogo: false
+            };
+            
+            Plotly.newPlot(container, traces, layout, config);
+        }
+
+        function addToHistory(entry) {
+            history.unshift(entry);
+            if (history.length > 10) {
+                history = history.slice(0, 10);
+            }
+            updateHistoryDisplay();
+        }
+
+        function updateHistoryDisplay() {
+            const container = document.getElementById('historyContainer');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">No computations yet in this session</p>';
+                return;
+            }
+            
+            container.innerHTML = history.map((entry, index) => `
+                <div class="history-item" onclick="loadFromHistory(${index})">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="font-semibold text-gray-900 text-sm">f(x) = ${entry.function}</div>
+                        <div class="text-xs text-gray-500">${entry.timestamp.toLocaleTimeString()}</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                        <div>Interval: [${entry.bounds[0]}, ${entry.bounds[1]}]</div>
+                        <div>${entry.mode === 'maximize' ? 'Max' : 'Min'}: ${entry.result.f_min.toFixed(4)} at x=${entry.result.x_min.toFixed(4)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadFromHistory(index) {
+            const entry = history[index];
+            mathField.latex(entry.function);
+            document.getElementById('leftBound').value = entry.bounds[0];
+            document.getElementById('rightBound').value = entry.bounds[1];
+            document.getElementById('tolerance').value = entry.tolerance;
+            document.getElementById('mode').value = entry.mode;
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function clearResults() {
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    <p class="text-lg">No results yet. Run the solver to see results.</p>
+                </div>
+            `;
+            
+            document.getElementById('graphContainer').innerHTML = `
+                <div class="flex items-center justify-center h-[400px] text-gray-500">
+                    <div class="text-center">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                        </svg>
+                        <p class="text-lg">Graph will appear here after running the solver</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('iterationTableCard').classList.add('hidden');
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear the session history?')) {
+                history = [];
+                updateHistoryDisplay();
+            }
+        }
+
+        function togglePanel() {
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('panelOverlay');
+            document.body.classList.toggle('panel-open');
+            panel.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        function closePanel() {
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('panelOverlay');
+            document.body.classList.remove('panel-open');
+            panel.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePanel();
+        });
+    </script>
+</body>
+</html>

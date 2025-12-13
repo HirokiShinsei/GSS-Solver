@@ -4,1049 +4,597 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Golden Section Search Solver</title>
-    <script async src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
-    <style>
-        :root {
-            --color-primary: #2563eb;
-            --color-primary-dark: #1d4ed8;
-            --color-success: #16a34a;
-            --color-error: #dc2626;
-            --color-warning: #ea580c;
-            --color-bg: #f8fafc;
-            --color-surface: #ffffff;
-            --color-border: #e2e8f0;
-            --color-text: #1e293b;
-            --color-text-secondary: #64748b;
-            --space-4: 4px;
-            --space-8: 8px;
-            --space-12: 12px;
-            --space-16: 16px;
-            --space-20: 20px;
-            --space-24: 24px;
-            --radius: 8px;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition: 0.2s ease;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--color-bg);
-            color: var(--color-text);
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: var(--space-20);
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: var(--space-24);
-            padding: var(--space-20) 0;
-            border-bottom: 2px solid var(--color-border);
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            color: var(--color-primary);
-            margin-bottom: var(--space-8);
-        }
-
-        .subtitle {
-            color: var(--color-text-secondary);
-            font-size: 1.1rem;
-        }
-
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: var(--space-24);
-            margin-bottom: var(--space-24);
-        }
-
-        @media (max-width: 1024px) {
-            .main-grid {
-                grid-template-columns: 1fr;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gss-blue-dark': '#003c7d',
+                        'gss-blue': '#0055b8',
+                        'gss-blue-light': '#4da3ff',
+                        'gss-blue-accent': '#0073e6',
+                    }
+                }
             }
         }
-
-        .card {
-            background: var(--color-surface);
-            border-radius: var(--radius);
-            border: 1px solid var(--color-border);
-            padding: var(--space-20);
-            box-shadow: var(--shadow-sm);
-            transition: box-shadow var(--transition);
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        .card:hover {
-            box-shadow: var(--shadow-md);
+        /* Glassmorphism effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .card h2 {
-            font-size: 1.5rem;
-            color: var(--color-primary);
-            margin-bottom: var(--space-16);
-            display: flex;
-            align-items: center;
-            gap: var(--space-8);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
-        .form-group {
-            margin-bottom: var(--space-16);
+        /* Premium Glass Button */
+        .glass-button {
+            position: relative;
+            background: linear-gradient(135deg, rgba(0, 60, 125, 0.85) 0%, rgba(0, 115, 230, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 60, 125, 0.25),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
         }
 
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: var(--space-8);
-            color: var(--color-text);
-            font-size: 0.95rem;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        textarea {
-            width: 100%;
-            padding: var(--space-12);
-            border: 2px solid var(--color-border);
-            border-radius: var(--radius);
-            font-family: inherit;
-            font-size: 1rem;
-            transition: border-color var(--transition), box-shadow var(--transition);
-        }
-
-        input[type="text"]:focus,
-        input[type="number"]:focus,
-        textarea:focus {
-            outline: none;
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        input.error {
-            border-color: var(--color-error);
-        }
-
-        .error-message {
-            color: var(--color-error);
-            font-size: 0.85rem;
-            margin-top: var(--space-4);
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        .helper-text {
-            color: var(--color-text-secondary);
-            font-size: 0.85rem;
-            margin-top: var(--space-4);
-        }
-
-        .button-group {
-            display: flex;
-            gap: var(--space-12);
-            flex-wrap: wrap;
-            margin-top: var(--space-20);
-        }
-
-        button {
-            padding: var(--space-12) var(--space-24);
-            border: none;
-            border-radius: var(--radius);
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all var(--transition);
-            display: flex;
-            align-items: center;
-            gap: var(--space-8);
-            white-space: nowrap;
-        }
-
-        .btn-primary {
-            background-color: var(--color-primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--color-primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background-color: var(--color-surface);
-            color: var(--color-primary);
-            border: 2px solid var(--color-primary);
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(37, 99, 235, 0.05);
-        }
-
-        .btn-small {
-            padding: var(--space-8) var(--space-12);
-            font-size: 0.9rem;
-        }
-
-        .results-section {
-            display: none;
-        }
-
-        .results-section.show {
-            display: block;
-        }
-
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--space-16);
-            margin-bottom: var(--space-20);
-        }
-
-        .result-box {
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
-            border: 2px solid var(--color-primary);
-            border-radius: var(--radius);
-            padding: var(--space-16);
-            text-align: center;
-        }
-
-        .result-label {
-            color: var(--color-text-secondary);
-            font-size: 0.9rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: var(--space-8);
-        }
-
-        .result-value {
-            font-size: 1.8rem;
-            color: var(--color-primary);
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
-            word-break: break-all;
-        }
-
-        .plot-container {
-            text-align: center;
-            margin: var(--space-20) 0;
-        }
-
-        .plot-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: var(--radius);
-            border: 1px solid var(--color-border);
-            box-shadow: var(--shadow-md);
-        }
-
-        .plot-loading {
-            color: var(--color-text-secondary);
-            font-style: italic;
-            padding: var(--space-20);
-        }
-
-        .iterations-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: var(--space-20) 0;
-            font-size: 0.9rem;
-            overflow-x: auto;
-            display: block;
-        }
-
-        .iterations-table thead {
-            background-color: var(--color-primary);
-            color: white;
-        }
-
-        .iterations-table th {
-            padding: var(--space-12);
-            text-align: left;
-            font-weight: 600;
-        }
-
-        .iterations-table td {
-            padding: var(--space-12);
-            border-bottom: 1px solid var(--color-border);
-            font-family: 'Courier New', monospace;
-        }
-
-        .iterations-table tbody tr:hover {
-            background-color: rgba(37, 99, 235, 0.05);
-        }
-
-        .iterations-table tbody tr:nth-child(even) {
-            background-color: var(--color-bg);
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            margin: var(--space-20) 0;
-        }
-
-        .history-panel {
-            margin-top: var(--space-24);
-        }
-
-        .history-item {
-            background-color: var(--color-bg);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius);
-            padding: var(--space-16);
-            margin-bottom: var(--space-12);
-            cursor: pointer;
-            transition: all var(--transition);
-        }
-
-        .history-item:hover {
-            background-color: rgba(37, 99, 235, 0.05);
-            border-color: var(--color-primary);
-        }
-
-        .history-time {
-            color: var(--color-text-secondary);
-            font-size: 0.85rem;
-            margin-bottom: var(--space-4);
-        }
-
-        .history-function {
-            font-family: 'Courier New', monospace;
-            font-weight: 600;
-            margin-bottom: var(--space-4);
-        }
-
-        .history-result {
-            color: var(--color-success);
-            font-weight: 600;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: var(--space-20);
-            color: var(--color-primary);
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .spinner {
-            border: 4px solid var(--color-border);
-            border-top: 4px solid var(--color-primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto var(--space-12) auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
+        .glass-button::before {
+            content: '';
+            position: absolute;
             top: 0;
-            left: 0;
+            left: -100%;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.2), 
+                transparent);
+            transition: left 0.6s ease;
+        }
+
+        .glass-button:hover::before {
+            left: 100%;
+        }
+
+        .glass-button:hover {
+            background: linear-gradient(135deg, rgba(0, 85, 184, 0.9) 0%, rgba(77, 163, 255, 0.95) 100%);
+            box-shadow: 0 12px 48px rgba(0, 115, 230, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .glass-button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 16px rgba(0, 60, 125, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-button-text {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Enhanced navigation with premium feel */
+        .nav-glass {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid rgba(0, 115, 230, 0.08);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06),
+                        0 1px 0 rgba(255, 255, 255, 0.5) inset;
+        }
+
+        /* Logo placeholder */
+        .logo-placeholder {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, rgba(0, 60, 125, 0.1) 0%, rgba(0, 115, 230, 0.15) 100%);
+            border: 2px dashed rgba(0, 115, 230, 0.3);
+            border-radius: 12px;
+            display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s ease;
         }
 
-        .modal.show {
+        .logo-placeholder:hover {
+            background: linear-gradient(135deg, rgba(0, 60, 125, 0.15) 0%, rgba(0, 115, 230, 0.2) 100%);
+            border-color: rgba(0, 115, 230, 0.5);
+            transform: scale(1.05);
+        }
+
+        /* Premium nav links */
+        .nav-link {
+            position: relative;
+            padding: 0.625rem 1.25rem;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(0, 115, 230, 0.08) 0%, rgba(77, 163, 255, 0.12) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-link:hover::before {
+            opacity: 1;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0.375rem;
+            left: 50%;
+            transform: translateX(-50%) scaleX(0);
+            width: calc(100% - 1.5rem);
+            height: 2px;
+            background: linear-gradient(90deg, #4da3ff, #0073e6);
+            border-radius: 2px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-link:hover::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        .nav-link.active {
+            color: #0073e6;
+            font-weight: 600;
+        }
+
+        .nav-link.active::before {
+            opacity: 1;
+            background: linear-gradient(135deg, rgba(0, 115, 230, 0.12) 0%, rgba(77, 163, 255, 0.15) 100%);
+        }
+
+        .nav-link.active::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        /* Premium mobile menu button */
+        .menu-toggle {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 115, 230, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 115, 230, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 115, 230, 0.15);
+        }
+
+        .menu-toggle:active {
+            transform: scale(0.95);
+        }
+
+        /* Side Panel for Mobile */
+        .side-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .side-panel-overlay.active {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            pointer-events: auto;
+        }
+
+        .side-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 280px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 101;
             display: flex;
+            flex-direction: column;
         }
 
-        .modal-content {
-            background: var(--color-surface);
-            border-radius: var(--radius);
-            padding: var(--space-24);
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.2);
+        .side-panel.active {
+            right: 0;
         }
 
-        .modal-header {
+        .side-panel-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(0, 115, 230, 0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--space-16);
         }
 
-        .close-button {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--color-text-secondary);
+        .side-panel-nav {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
         }
 
-        .alert {
-            padding: var(--space-12);
-            border-radius: var(--radius);
-            margin-bottom: var(--space-16);
-            display: none;
+        .side-panel .nav-link {
+            width: 100%;
+            text-align: left;
+            padding: 1rem 1.25rem;
         }
 
-        .alert.show {
-            display: block;
+        .side-panel .nav-link::after {
+            left: 1rem;
+            transform: translateX(0) scaleX(0);
+            width: calc(100% - 2rem);
         }
 
-        .alert-error {
-            background-color: rgba(220, 38, 38, 0.1);
-            border: 1px solid var(--color-error);
-            color: var(--color-error);
+        .side-panel .nav-link:hover::after,
+        .side-panel .nav-link.active::after {
+            transform: translateX(0) scaleX(1);
         }
 
-        footer {
-            text-align: center;
-            padding: var(--space-20) 0;
-            color: var(--color-text-secondary);
-            border-top: 1px solid var(--color-border);
-            margin-top: var(--space-24);
+        .close-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 115, 230, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 10px;
+        }
+
+        .close-panel:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 115, 230, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 115, 230, 0.15);
+            transform: rotate(90deg);
+        }
+
+        .hero-underline {
+            background: linear-gradient(to right, #4da3ff 0%, #0073e6 100%);
+            height: 4px;
+            width: 200px;
+            margin: 0;
+            border-radius: 2px;
+            box-shadow: 0 4px 12px rgba(77, 163, 255, 0.4);
+        }
+
+        .decorative-bg {
+            background: linear-gradient(135deg, #003c7d 0%, #0055b8 50%, #4da3ff 100%);
+        }
+
+        .decorative-shape {
+            position: absolute;
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+
+        /* Floating animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #003c7d 0%, #0073e6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Background gradient */
+        .bg-gradient-soft {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #f0f9ff 100%);
+        }
+
+        /* Glow effect */
+        .glow {
+            box-shadow: 0 0 20px rgba(77, 163, 255, 0.3),
+                        0 0 40px rgba(0, 115, 230, 0.2),
+                        0 0 60px rgba(0, 60, 125, 0.1);
+        }
+
+        /* Arrow animation */
+        .arrow-animate {
+            transition: transform 0.3s ease;
+        }
+
+        .glass-button:hover .arrow-animate {
+            transform: translateX(4px);
+        }
+
+        /* Prevent body scroll when panel is open */
+        body.panel-open {
+            overflow: hidden;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🎯 Golden Section Search Solver</h1>
-            <p class="subtitle">Find function minima using the Golden Section Search algorithm</p>
-        </header>
-
-        <div class="main-grid">
-            <!-- Input Panel -->
-            <div class="card">
-                <h2>⚙️ Solver Configuration</h2>
-
-                <div class="form-group">
-                    <label for="funcInput">Mathematical Function</label>
-                    <input type="text" id="funcInput" placeholder="e.g., x**2 - 4*x + 3, sin(x), exp(-x**2)">
-                    <div class="error-message" id="funcError"></div>
-                    <div class="helper-text">Supports: +, -, *, /, **, sin, cos, tan, exp, log, sqrt, pi, e</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="boundA">Left Bound (a)</label>
-                    <input type="number" id="boundA" placeholder="-10" step="0.1">
-                </div>
-
-                <div class="form-group">
-                    <label for="boundB">Right Bound (b)</label>
-                    <input type="number" id="boundB" placeholder="10" step="0.1">
-                </div>
-
-                <div class="form-group">
-                    <label for="tolerance">Tolerance</label>
-                    <input type="number" id="tolerance" placeholder="0.0001" value="0.0001" step="0.00001" min="0">
-                    <div class="helper-text">Standard tolerance for convergence (e.g., 0.0001)</div>
-                </div>
-
-                <div class="button-group">
-                    <button class="btn-primary" id="computeBtn" onclick="computeGSS()">
-                        🚀 Compute GSS
-                    </button>
-                    <button class="btn-secondary" id="clearBtn" onclick="clearForm()">
-                        🔄 Clear
-                    </button>
-                </div>
-
-                <div class="loading" id="loading">
-                    <div class="spinner"></div>
-                    <p>Computing... (Pyodide loading Python runtime)</p>
-                </div>
-
-                <div class="alert alert-error" id="generalError"></div>
-            </div>
-
-            <!-- Results Panel -->
-            <div class="card">
-                <h2>📊 Results</h2>
-
-                <div class="results-section" id="resultsSection">
-                    <div class="result-grid">
-                        <div class="result-box">
-                            <div class="result-label">Minimum X</div>
-                            <div class="result-value" id="resultX">—</div>
+<body class="bg-gradient-soft antialiased">
+    <!-- Navigation Bar -->
+    <nav class="nav-glass sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo Placeholder -->
+                <div class="flex-shrink-0">
+                    <a href="#" class="flex items-center group">
+                        <div class="logo-placeholder">
+                            <svg class="w-6 h-6 text-gss-blue-accent opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
                         </div>
-                        <div class="result-box">
-                            <div class="result-label">f(x) Min</div>
-                            <div class="result-value" id="resultFX">—</div>
-                        </div>
-                        <div class="result-box">
-                            <div class="result-label">Iterations</div>
-                            <div class="result-value" id="resultIter">—</div>
-                        </div>
-                    </div>
-
-                    <div class="plot-container" id="plotContainer">
-                        <div class="plot-loading">Generating plot...</div>
-                    </div>
-
-                    <h3 style="margin-top: var(--space-24); margin-bottom: var(--space-16);">📈 Iteration Details</h3>
-                    <div class="table-wrapper">
-                        <table class="iterations-table" id="iterationsTable">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>a</th>
-                                    <th>b</th>
-                                    <th>x₁</th>
-                                    <th>x₂</th>
-                                    <th>f(x₁)</th>
-                                    <th>f(x₂)</th>
-                                    <th>Width</th>
-                                </tr>
-                            </thead>
-                            <tbody id="iterationsBody">
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn-secondary btn-small" onclick="exportCurrentCSV()">
-                            📥 Export Iterations CSV
-                        </button>
-                        <button class="btn-secondary btn-small" onclick="copyToClipboard()">
-                            📋 Copy Results
-                        </button>
-                    </div>
+                    </a>
                 </div>
 
-                <div style="text-align: center; color: var(--color-text-secondary); padding: var(--space-20);" id="noResults">
-                    No computations yet. Enter function and bounds to get started.
+                <!-- Desktop Navigation -->
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="#home" class="nav-link active text-gray-700">
+                        <span class="relative z-10">Home</span>
+                    </a>
+                    <a href="solver.html" class="nav-link text-gray-700">
+                        <span class="relative z-10">Solver</span>
+                    </a>
+                    <a href="#about" class="nav-link text-gray-700">
+                        <span class="relative z-10">About Us</span>
+                    </a>
                 </div>
+
+                <!-- Mobile Menu Button -->
+                <button class="md:hidden menu-toggle p-2.5 rounded-xl" onclick="togglePanel()">
+                    <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
             </div>
         </div>
+    </nav>
 
-        <!-- History & Export Panel -->
-        <div class="card history-panel">
-            <h2>📚 Session History</h2>
-            <div class="button-group">
-                <button class="btn-secondary btn-small" onclick="openHistoryModal()">
-                    👀 View History
-                </button>
-                <button class="btn-secondary btn-small" onclick="exportHistoryCSV()">
-                    📥 Export as CSV
-                </button>
-                <button class="btn-secondary btn-small" onclick="exportHistoryJSON()">
-                    📥 Export as JSON
-                </button>
-                <button class="btn-secondary btn-small" onclick="clearHistory()">
-                    🗑️ Clear History
-                </button>
+    <!-- Side Panel Overlay -->
+    <div class="side-panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+
+    <!-- Side Panel -->
+    <div class="side-panel" id="sidePanel">
+        <div class="side-panel-header">
+            <div class="logo-placeholder">
+                <svg class="w-6 h-6 text-gss-blue-accent opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
             </div>
-            <div id="historyContainer" style="margin-top: var(--space-16);">
-                <p style="color: var(--color-text-secondary); text-align: center;">No history yet</p>
-            </div>
+            <button class="close-panel" onclick="closePanel()">
+                <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="side-panel-nav">
+            <a href="#home" class="nav-link active text-gray-700" onclick="closePanel()">
+                <span class="relative z-10">Home</span>
+            </a>
+            <a href="solver.html" class="nav-link text-gray-700" onclick="closePanel()">
+                <span class="relative z-10">Solver</span>
+            </a>
+            <a href="#about" class="nav-link text-gray-700" onclick="closePanel()">
+                <span class="relative z-10">About Us</span>
+            </a>
         </div>
     </div>
 
-    <!-- History Modal -->
-    <div class="modal" id="historyModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Computation History</h2>
-                <button class="close-button" onclick="closeHistoryModal()">✕</button>
-            </div>
-            <div id="historyList"></div>
-        </div>
-    </div>
+    <!-- Hero Section -->
+    <section id="home" class="min-h-screen flex items-center py-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto w-full">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Left Content -->
+                <div class="space-y-8">
+                    <div class="glass-card p-8 rounded-3xl shadow-xl">
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+                            Golden Section<br>
+                            <span class="gradient-text">Search Solver</span>
+                        </h1>
+                        <div class="hero-underline"></div>
+                        <div class="mt-6 space-y-4"></div>
+                        <p class="text-xl sm:text-2xl text-gray-700">
+                            <span class="italic text-gss-blue-accent font-semibold">Find</span> 
+                            <span class="text-gray-900">the minimum of any function</span>
+                        </p>
+                        
+                        <p class="text-lg sm:text-xl text-gray-600">
+                            no calculus, no 
+                            <span class="italic text-gss-blue-accent font-semibold">derivatives</span> 
+                            needed.
+                        </p>
+                    </div>
 
-    <footer>
-        <p>Golden Section Search Solver © 2025 | Powered by Pyodide & SciPy</p>
-    </footer>
+    
+
+                    <div class="glass-card p-8 rounded-3xl shadow-xl">
+                        <p class="text-gray-600 leading-relaxed">
+                            The Golden Section Search Solver is an interactive, 
+                            browser-based tool that brings numerical optimization 
+                            to your fingertips. Whether you're a student exploring 
+                            numerical methods, an engineer prototyping solutions, 
+                            or a researcher validating algorithms, this application 
+                            automates the tedious work and lets you focus on 
+                            understanding why optimization matters.
+                        </p>
+                    </div>
+
+                    <div class="pt-4">
+                        <a href="solver.html" class="inline-flex items-center px-10 py-4 glass-button text-white font-semibold rounded-2xl transform hover:scale-105 transition-all duration-300">
+                            <span class="glass-button-text">Let's start solving</span>
+                            <svg class="ml-3 w-5 h-5 glass-button-text arrow-animate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Decorative Section -->
+                <div class="hidden lg:block">
+                    <div class="relative h-96 lg:h-[500px] float-animation">
+                        <!-- Main decorative background -->
+                        <div class="absolute inset-0 decorative-bg rounded-3xl shadow-2xl overflow-hidden glow">
+                            <!-- Large GSS Text -->
+                            <div class="absolute top-8 left-8 text-white font-bold text-8xl opacity-20">
+                                GSS
+                            </div>
+
+                            <!-- Decorative circles -->
+                            <div class="decorative-shape" style="width: 280px; height: 280px; bottom: 10%; right: -5%;"></div>
+                            <div class="decorative-shape" style="width: 200px; height: 200px; bottom: 25%; right: 15%;"></div>
+                            <div class="decorative-shape" style="width: 150px; height: 150px; bottom: 45%; right: 5%;"></div>
+                            <div class="decorative-shape" style="width: 100px; height: 100px; top: 30%; left: 10%; opacity: 0.5;"></div>
+                            <div class="decorative-shape" style="width: 120px; height: 120px; top: 15%; right: 20%; opacity: 0.4;"></div>
+
+                            <!-- Wave patterns -->
+                            <svg class="absolute bottom-0 right-0 w-full h-full opacity-40" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M 0 250 Q 125 200 250 250 T 500 250" stroke="white" stroke-width="3" fill="none" opacity="0.6"/>
+                                <path d="M 0 300 Q 125 250 250 300 T 500 300" stroke="white" stroke-width="3" fill="none" opacity="0.5"/>
+                                <path d="M 0 350 Q 125 300 250 350 T 500 350" stroke="white" stroke-width="3" fill="none" opacity="0.4"/>
+                                <path d="M 100 400 Q 200 350 300 400 T 500 400" stroke="white" stroke-width="2" fill="none" opacity="0.3"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile decorative version -->
+                <div class="lg:hidden">
+                    <div class="relative h-64 decorative-bg rounded-3xl shadow-xl overflow-hidden glow">
+                        <div class="absolute top-4 left-4 text-white font-bold text-6xl opacity-20">
+                            GSS
+                        </div>
+                        <div class="decorative-shape" style="width: 150px; height: 150px; bottom: -20px; right: -20px;"></div>
+                        <div class="decorative-shape" style="width: 100px; height: 100px; bottom: 30px; right: 40px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solver Section Placeholder -->
+    <section id="solver" class="min-h-screen py-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <div class="glass-card inline-block px-12 py-8 rounded-3xl shadow-xl">
+                    <h2 class="text-4xl font-bold gradient-text mb-4">Solver</h2>
+                    <div class="hero-underline mx-auto"></div>
+                    <p class="mt-6 text-xl text-gray-600">Interactive optimization tool coming soon...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section Placeholder -->
+    <section id="about" class="min-h-screen py-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <div class="glass-card inline-block px-12 py-8 rounded-3xl shadow-xl">
+                    <h2 class="text-4xl font-bold gradient-text mb-4">About Us</h2>
+                    <div class="hero-underline mx-auto"></div>
+                    <p class="mt-6 text-xl text-gray-600">Learn more about the Golden Section Search method...</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <script>
-        // Global state
-        let pyodide = null;
-        let history = [];
-        let currentResult = null;
-        let currentIterations = [];
-
-        // Python code to be loaded
-        const pythonCode = `
-import numpy as np
-from scipy.optimize import minimize_scalar
-import json
-from datetime import datetime
-import matplotlib.pyplot as plt
-import io
-import base64
-
-class GSSolver:
-    def __init__(self):
-        self.iterations = []
-        self.result = None
-        self.function_str = ""
-        self.bounds = (None, None)
-        self.tolerance = None
-        
-    def parse_function(self, func_str):
-        from sympy import symbols, sympify, lambdify
-        try:
-            x = symbols('x')
-            expr = sympify(func_str)
-            func = lambdify(x, expr, modules=['numpy'])
-            return func
-        except Exception as e:
-            raise ValueError(f"Invalid function: {str(e)}")
-    
-    def golden_section_search(self, func_str, a, b, tol=1e-4):
-        self.function_str = func_str
-        self.bounds = (a, b)
-        self.tolerance = tol
-        self.iterations = []
-        
-        if a >= b:
-            raise ValueError("Left bound must be less than right bound")
-        
-        func = self.parse_function(func_str)
-        
-        result = minimize_scalar(
-            func, 
-            bounds=(a, b), 
-            method='golden',
-            options={'xatol': tol}
-        )
-        
-        x_min = result.x
-        f_min = result.fun
-        num_iterations = result.nit
-        
-        self.result = {
-            'x_min': float(x_min),
-            'f_min': float(f_min),
-            'num_iterations': int(num_iterations),
-            'tolerance': tol,
-            'function': func_str,
-            'bounds': {'a': float(a), 'b': float(b)},
-            'success': result.success
-        }
-        
-        self._generate_iteration_details(func, a, b, tol)
-        return self.result
-    
-    def _generate_iteration_details(self, func, a, b, tol):
-        golden_ratio = 0.381966
-        iteration = 0
-        
-        while (b - a) > tol and iteration < 100:
-            iteration += 1
+        function togglePanel() {
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('panelOverlay');
+            const body = document.body;
             
-            x1 = a + (1 - golden_ratio) * (b - a)
-            x2 = a + golden_ratio * (b - a)
-            
-            f_x1 = float(func(x1))
-            f_x2 = float(func(x2))
-            
-            interval_width = float(b - a)
-            
-            self.iterations.append({
-                'iteration': iteration,
-                'a': float(a),
-                'b': float(b),
-                'x1': float(x1),
-                'x2': float(x2),
-                'f_x1': f_x1,
-                'f_x2': f_x2,
-                'interval_width': interval_width
-            })
-            
-            if f_x1 < f_x2:
-                b = x2
-            else:
-                a = x1
-    
-    def get_iterations(self):
-        return self.iterations
-    
-    def get_result(self):
-        return self.result
-    
-    def create_plot(self, bounds):
-        from sympy import symbols, sympify, lambdify
-        
-        try:
-            x = symbols('x')
-            expr = sympify(self.function_str)
-            func = lambdify(x, expr, modules=['numpy'])
-            
-            fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
-            
-            a, b = bounds
-            x_vals = np.linspace(a - (b-a)*0.1, b + (b-a)*0.1, 500)
-            y_vals = [func(xi) for xi in x_vals]
-            
-            ax.plot(x_vals, y_vals, 'b-', linewidth=2, label='f(x)')
-            
-            num_iters = len(self.iterations)
-            for i, iter_data in enumerate(self.iterations):
-                alpha = 0.1 + (i / num_iters) * 0.3
-                color_intensity = i / num_iters
-                
-                iter_a = iter_data['a']
-                iter_b = iter_data['b']
-                
-                ax.axvspan(iter_a, iter_b, alpha=alpha*0.5, 
-                          color=plt.cm.viridis(color_intensity))
-                
-                if i < min(5, num_iters):
-                    x1 = iter_data['x1']
-                    x2 = iter_data['x2']
-                    ax.plot([x1, x2], [iter_data['f_x1'], iter_data['f_x2']], 
-                           'ro', markersize=4, alpha=0.6)
-            
-            x_min = self.result['x_min']
-            f_min = self.result['f_min']
-            ax.plot(x_min, f_min, 'g*', markersize=20, label=f'Minimum (x={x_min:.4f})', 
-                   zorder=5)
-            
-            ax.set_xlabel('x', fontsize=12, fontweight='bold')
-            ax.set_ylabel('f(x)', fontsize=12, fontweight='bold')
-            ax.set_title(f'Golden Section Search: {self.function_str}', fontsize=14, fontweight='bold')
-            ax.grid(True, alpha=0.3)
-            ax.legend(fontsize=10)
-            
-            buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=100)
-            buffer.seek(0)
-            img_base64 = base64.b64encode(buffer.read()).decode()
-            plt.close(fig)
-            
-            return f"data:image/png;base64,{img_base64}"
-        except Exception as e:
-            return None
-
-solver = GSSolver()
-`;
-
-        // Initialize Pyodide
-        async function initPyodide() {
-            try {
-                pyodide = await loadPyodide();
-                await pyodide.loadPackage(['scipy', 'sympy', 'matplotlib']);
-                await pyodide.runPythonAsync(pythonCode);
-                console.log('Pyodide initialized successfully');
-            } catch (error) {
-                console.error('Error initializing Pyodide:', error);
-                showError('Failed to initialize Python runtime. Please refresh the page.');
-            }
+            panel.classList.toggle('active');
+            overlay.classList.toggle('active');
+            body.classList.toggle('panel-open');
         }
 
-        // Compute GSS
-        async function computeGSS() {
-            const funcInput = document.getElementById('funcInput').value.trim();
-            const boundA = parseFloat(document.getElementById('boundA').value);
-            const boundB = parseFloat(document.getElementById('boundB').value);
-            const tolerance = parseFloat(document.getElementById('tolerance').value);
+        function closePanel() {
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('panelOverlay');
+            const body = document.body;
+            
+            panel.classList.remove('active');
+            overlay.classList.remove('active');
+            body.classList.remove('panel-open');
+        }
 
-            // Validate inputs
-            if (!funcInput) {
-                showFuncError('Function cannot be empty');
-                return;
-            }
-
-            if (isNaN(boundA) || isNaN(boundB)) {
-                showError('Bounds must be valid numbers');
-                return;
-            }
-
-            if (boundA >= boundB) {
-                showError('Left bound must be less than right bound');
-                return;
-            }
-
-            if (isNaN(tolerance) || tolerance <= 0) {
-                showError('Tolerance must be a positive number');
-                return;
-            }
-
-            // Clear previous errors
-            clearErrors();
-            showLoading(true);
-
-            try {
-                // Execute Python computation
-                await pyodide.runPythonAsync(`
-solver.golden_section_search('${funcInput}', ${boundA}, ${boundB}, ${tolerance})
-result = solver.get_result()
-iterations = solver.get_iterations()
-plot_img = solver.create_plot((${boundA}, ${boundB}))
-`);
-
-                const result = pyodide.globals.get('result');
-                const iterations = pyodide.globals.get('iterations');
-                const plotImg = pyodide.globals.get('plot_img');
-
-                currentResult = {
-                    x_min: result.get('x_min'),
-                    f_min: result.get('f_min'),
-                    num_iterations: result.get('num_iterations'),
-                    tolerance: tolerance,
-                    function: funcInput,
-                    bounds: { a: boundA, b: boundB },
-                    timestamp: new Date().toISOString()
-                };
-
-                currentIterations = [];
-                for (let i = 0; i < iterations.length; i++) {
-                    const iter = iterations.get(i);
-                    currentIterations.push({
-                        iteration: iter.get('iteration'),
-                        a: iter.get('a'),
-                        b: iter.get('b'),
-                        x1: iter.get('x1'),
-                        x2: iter.get('x2'),
-                        f_x1: iter.get('f_x1'),
-                        f_x2: iter.get('f_x2'),
-                        interval_width: iter.get('interval_width')
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
                     });
                 }
-
-                displayResults(currentResult, currentIterations, plotImg);
-                addToHistory(currentResult);
-                showLoading(false);
-
-            } catch (error) {
-                showLoading(false);
-                showFuncError(error.message);
-                console.error('Computation error:', error);
-            }
-        }
-
-        function displayResults(result, iterations, plotImg) {
-            document.getElementById('resultX').textContent = result.x_min.toFixed(6);
-            document.getElementById('resultFX').textContent = result.f_min.toFixed(6);
-            document.getElementById('resultIter').textContent = result.num_iterations;
-
-            // Display plot
-            const plotContainer = document.getElementById('plotContainer');
-            if (plotImg) {
-                plotContainer.innerHTML = `<img src="${plotImg}" alt="Function Plot">`;
-            } else {
-                plotContainer.innerHTML = '<div class="plot-loading">Could not generate plot</div>';
-            }
-
-            // Display iterations table
-            const tbody = document.getElementById('iterationsBody');
-            tbody.innerHTML = '';
-            iterations.forEach(iter => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${iter.iteration}</td>
-                    <td>${iter.a.toFixed(6)}</td>
-                    <td>${iter.b.toFixed(6)}</td>
-                    <td>${iter.x1.toFixed(6)}</td>
-                    <td>${iter.x2.toFixed(6)}</td>
-                    <td>${iter.f_x1.toFixed(6)}</td>
-                    <td>${iter.f_x2.toFixed(6)}</td>
-                    <td>${iter.interval_width.toFixed(8)}</td>
-                `;
             });
-
-            document.getElementById('resultsSection').classList.add('show');
-            document.getElementById('noResults').style.display = 'none';
-        }
-
-        function addToHistory(result) {
-            history.unshift(result);
-            updateHistoryDisplay();
-        }
-
-        function updateHistoryDisplay() {
-            const container = document.getElementById('historyContainer');
-            if (history.length === 0) {
-                container.innerHTML = '<p style="color: var(--color-text-secondary); text-align: center;">No history yet</p>';
-                return;
-            }
-
-            container.innerHTML = history.map((item, index) => `
-                <div class="history-item" onclick="reloadResult(${index})">
-                    <div class="history-time">${new Date(item.timestamp).toLocaleString()}</div>
-                    <div class="history-function">f(x) = ${item.function}</div>
-                    <div class="history-result">x_min = ${item.x_min.toFixed(6)}, f(x_min) = ${item.f_min.toFixed(6)}</div>
-                </div>
-            `).join('');
-        }
-
-        function reloadResult(index) {
-            const item = history[index];
-            document.getElementById('funcInput').value = item.function;
-            document.getElementById('boundA').value = item.bounds.a;
-            document.getElementById('boundB').value = item.bounds.b;
-            document.getElementById('tolerance').value = item.tolerance;
-            computeGSS();
-        }
-
-        function clearForm() {
-            document.getElementById('funcInput').value = '';
-            document.getElementById('boundA').value = '';
-            document.getElementById('boundB').value = '';
-            document.getElementById('tolerance').value = '0.0001';
-            clearErrors();
-        }
-
-        function clearHistory() {
-            if (confirm('Clear all history? This cannot be undone.')) {
-                history = [];
-                sessionStorage.removeItem('gssHistory');
-                updateHistoryDisplay();
-            }
-        }
-
-        function exportHistoryCSV() {
-            if (history.length === 0) {
-                alert('No history to export');
-                return;
-            }
-            let csv = 'Timestamp,Function,Min X,f(x) Min,Iterations,Left Bound,Right Bound,Tolerance\n';
-            history.forEach(item => {
-                csv += `"${item.timestamp}","${item.function}",${item.x_min},${item.f_min},${item.num_iterations},${item.bounds.a},${item.bounds.b},${item.tolerance}\n`;
-            });
-            downloadFile(csv, 'gss_history.csv', 'text/csv');
-        }
-
-        function exportHistoryJSON() {
-            if (history.length === 0) {
-                alert('No history to export');
-                return;
-            }
-            const json = JSON.stringify(history, null, 2);
-            downloadFile(json, 'gss_history.json', 'application/json');
-        }
-
-        function exportCurrentCSV() {
-            if (currentIterations.length === 0) {
-                alert('No iterations to export');
-                return;
-            }
-            let csv = 'Iteration,a,b,x1,x2,f(x1),f(x2),Interval Width\n';
-            currentIterations.forEach(iter => {
-                csv += `${iter.iteration},${iter.a},${iter.b},${iter.x1},${iter.x2},${iter.f_x1},${iter.f_x2},${iter.interval_width}\n`;
-            });
-            downloadFile(csv, 'gss_iterations.csv', 'text/csv');
-        }
-
-        function downloadFile(content, filename, type) {
-            const blob = new Blob([content], { type });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function copyToClipboard() {
-            if (!currentResult) {
-                alert('No results to copy');
-                return;
-            }
-            const text = `Golden Section Search Results
-Function: ${currentResult.function}
-Bounds: [${currentResult.bounds.a}, ${currentResult.bounds.b}]
-Minimum X: ${currentResult.x_min}
-f(x) Minimum: ${currentResult.f_min}
-Iterations: ${currentResult.num_iterations}
-Tolerance: ${currentResult.tolerance}`;
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Results copied to clipboard!');
-            });
-        }
-
-        function openHistoryModal() {
-            document.getElementById('historyModal').classList.add('show');
-        }
-
-        function closeHistoryModal() {
-            document.getElementById('historyModal').classList.remove('show');
-        }
-
-        function showLoading(show) {
-            document.getElementById('loading').classList.toggle('show', show);
-            document.getElementById('computeBtn').disabled = show;
-        }
-
-        function showError(message) {
-            const el = document.getElementById('generalError');
-            el.textContent = message;
-            el.classList.add('show');
-        }
-
-        function showFuncError(message) {
-            const el = document.getElementById('funcError');
-            el.textContent = message;
-            el.classList.add('show');
-            document.getElementById('funcInput').classList.add('error');
-        }
-
-        function clearErrors() {
-            document.getElementById('generalError').classList.remove('show');
-            document.getElementById('funcError').classList.remove('show');
-            document.getElementById('funcInput').classList.remove('error');
-        }
-
-        // Load sessionStorage history
-        function loadSessionHistory() {
-            const saved = sessionStorage.getItem('gssHistory');
-            if (saved) {
-                history = JSON.parse(saved);
-                updateHistoryDisplay();
-            }
-        }
-
-        // Save to sessionStorage
-        function saveSessionHistory() {
-            sessionStorage.setItem('gssHistory', JSON.stringify(history));
-        }
-
-        // Override addToHistory to save to sessionStorage
-        const originalAddToHistory = addToHistory;
-        addToHistory = function(result) {
-            originalAddToHistory(result);
-            saveSessionHistory();
-        };
-
-        // Initialize on load
-        window.addEventListener('load', () => {
-            loadSessionHistory();
-            initPyodide();
         });
 
-        // Close modal on outside click
-        document.getElementById('historyModal').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('historyModal')) {
-                closeHistoryModal();
+        // Update active nav link on scroll
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Close panel on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closePanel();
             }
         });
     </script>
