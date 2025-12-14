@@ -880,16 +880,16 @@
                         iterations = []
                         k = 0
                         
-                        // Parse function
+                        # Parse function
                         x = symbols('x')
                         expr = sympify(func_str)
                         func = lambdify(x, expr, modules=['numpy'])
                         
-                        // Validate bounds
+                        # Validate bounds
                         if a >= b:
                             raise ValueError("Left bound must be less than right bound")
                         
-                        // GSS algorithm
+                        # GSS algorithm
                         while (b - a) > tol and k < 100:
                             k += 1
                             x1 = a + (1 - golden_ratio) * (b - a)
