@@ -1057,19 +1057,98 @@
             `).join('');
         }
 
-        // This function now receives a base64 image string from the backend
-        function plotGraph(base64Image) {
+        function plotGraph(plotData) {
             const container = document.getElementById('graphContainer');
-            container.innerHTML = ''; // Clear placeholder
-            if (base64Image) {
-                const img = document.createElement('img');
-                img.src = `data:image/png;base64,${base64Image}`;
-                img.alt = "Function Plot";
-                img.className = "rounded-lg shadow-md w-full h-auto";
-                container.appendChild(img);
-            } else {
+            
+            if (!plotData || !plotData.x || !plotData.y) {
                 container.innerHTML = '<p class="text-center text-gray-500">Plot could not be generated.</p>';
+                return;
             }
+            
+            // Get bounds and minimum from current form/results
+            const leftBound = parseFloat(document.getElementById('leftBound').value);
+            const rightBound = parseFloat(document.getElementById('rightBound').value);
+            
+            // Find minimum point for marking
+            const minIdx = plotData.y.reduce((minIdx, val, idx) => 
+                val < plotData.y[minIdx] ? idx : minIdx, 0);
+            const minX = plotData.x[minIdx];
+            const minY = plotData.y[minIdx];
+            
+            // Main function curve
+            const traces = [
+                {
+                    x: plotData.x,
+                    y: plotData.y,
+                    mode: 'lines',
+                    name: 'f(x)',
+                    line: { color: '#0073e6', width: 3 },
+                    hovertemplate: '<b>x:</b> %{x:.6f}<br><b>f(x):</b> %{y:.6f}<extra></extra>'
+                },
+                // Minimum point marker
+                {
+                    x: [minX],
+                    y: [minY],
+                    mode: 'markers',
+                    name: `Minimum (${minX.toFixed(4)}, ${minY.toFixed(4)})`,
+                    marker: { color: '#ff3333', size: 10, symbol: 'circle' },
+                    hovertemplate: '<b>Minimum</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>'
+                }
+            ];
+            
+            // Add vertical lines for initial bounds
+            const layout = {
+                title: 'Golden Section Search Visualization',
+                xaxis: { 
+                    title: 'x', 
+                    zeroline: false,
+                    showline: true,
+                    linewidth: 1,
+                    linecolor: '#ccc'
+                },
+                yaxis: { 
+                    title: 'f(x)', 
+                    zeroline: false,
+                    showline: true,
+                    linewidth: 1,
+                    linecolor: '#ccc'
+                },
+                shapes: [
+                    // Left bound line
+                    {
+                        type: 'line',
+                        x0: leftBound,
+                        x1: leftBound,
+                        y0: Math.min(...plotData.y),
+                        y1: Math.max(...plotData.y),
+                        line: { color: '#999', width: 1, dash: 'dash' }
+                    },
+                    // Right bound line
+                    {
+                        type: 'line',
+                        x0: rightBound,
+                        x1: rightBound,
+                        y0: Math.min(...plotData.y),
+                        y1: Math.max(...plotData.y),
+                        line: { color: '#999', width: 1, dash: 'dash' }
+                    }
+                ],
+                margin: { l: 60, r: 40, t: 60, b: 60 },
+                hovermode: 'closest',
+                plot_bgcolor: 'rgba(255,255,255,0.95)',
+                paper_bgcolor: 'white',
+                font: { family: 'Inter, sans-serif', size: 12, color: '#333' },
+                legend: { x: 0.02, y: 0.98, bgcolor: 'rgba(255,255,255,0.8)' }
+            };
+            
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['lasso2d', 'select2d']
+            };
+            
+            Plotly.newPlot(container, traces, layout, config);
         }
 
         // This function is no longer needed as history is managed by the server

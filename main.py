@@ -2,9 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
+import numpy as np
 
 # Import your solver logic
-from gss_solver import golden_section_search, create_plot
+from gss_solver import golden_section_search
 
 app = FastAPI(
     title="Golden Section Search API",
@@ -45,7 +46,7 @@ class SolverResult(BaseModel):
     f_min: float
     iterations: list
     num_iterations: int
-    plot_data: str | None
+    plot_data: dict | None
 
 # --- API Endpoints --------------------------------------------------------
 
@@ -78,14 +79,21 @@ def solve_function(data: SolverInput):
                 it['f_x1'] = -it['f_x1']
                 it['f_x2'] = -it['f_x2']
 
-        # Generate the plot using your existing plot function
-        plot_base64 = create_plot(
-            func_str=data.func_str, # Use original function for plot
-            bounds=(data.a, data.b),
-            iterations=result['iterations'],
-            x_min=result['x_min'],
-            f_min=result['f_min']
-        )
+        # Generate plot data as x/y arrays for Plotly on the frontend
+        from sympy import symbols, sympify, lambdify
+        x_sym = symbols('x')
+        expr = sympify(data.func_str)
+        func = lambdify(x_sym, expr, modules=['numpy'])
+        
+        # Create x values with some padding around the bounds
+        padding = (data.b - data.a) * 0.1
+        x_vals = np.linspace(data.a - padding, data.b + padding, 500)
+        y_vals = func(x_vals)
+        
+        plot_data = {
+            "x": x_vals.tolist(),
+            "y": y_vals.tolist()
+        }
         
         # Prepare the response
         response_data = {
@@ -93,7 +101,7 @@ def solve_function(data: SolverInput):
             "f_min": result['f_min'],
             "iterations": result['iterations'],
             "num_iterations": result['num_iterations'],
-            "plot_data": plot_base64
+            "plot_data": plot_data
         }
 
         # Add to session history
