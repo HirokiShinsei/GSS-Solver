@@ -1,8 +1,8 @@
 """
 Golden Section Search (GSS) Optimization Solver
 Author: CS Student
-Description: Implements GSS algorithm for finding function minima.
-             Includes plotting and detailed iteration tracking.
+Description: Implements GSS for finding function minima and generating plots.
+             Designed for a FastAPI backend.
 """
 
 import numpy as np
@@ -11,56 +11,49 @@ import matplotlib.pyplot as plt
 import io
 import base64
 
+# Configure Matplotlib for headless environments
+plt.switch_backend('Agg')
+
 def golden_section_search(func_str, a, b, tol=1e-4):
     """
     Perform Golden Section Search optimization.
     
     Args:
-        func_str (str): Function expression as string
-        a (float): Left bound
-        b (float): Right bound
-        tol (float): Tolerance for convergence
+        func_str (str): Function expression as a string.
+        a (float): Left bound of the interval.
+        b (float): Right bound of the interval.
+        tol (float): Tolerance for the stopping criterion.
         
     Returns:
-        dict: Results with minimum point, function value, iterations
+        dict: A dictionary containing the results, including the minimum point,
+              function value at the minimum, and iteration details.
     """
-    golden_ratio = (3 - np.sqrt(5)) / 2
+    golden_ratio = (3 - np.sqrt(5)) / 2  # Approximately 0.381966
     iterations = []
     k = 0
     
-    # Validate bounds
     if a >= b:
-        raise ValueError("Left bound must be less than right bound")
+        raise ValueError("Invalid bounds: Left bound 'a' must be less than right bound 'b'.")
     
-    # Parse function using SymPy
     try:
         x = symbols('x')
-        # Replace common latex symbols for compatibility
-        processed_str = func_str.replace('\\', '').replace('^', '**')
-        expr = sympify(processed_str)
+        expr = sympify(func_str)
         func = lambdify(x, expr, modules=['numpy'])
     except Exception as e:
-        raise ValueError(f"Invalid function syntax: {str(e)}")
-    
-    # Golden Section Search algorithm
-    original_a, original_b = a, b
+        raise ValueError(f"Invalid function string: {str(e)}")
     
     x1 = a + golden_ratio * (b - a)
     x2 = b - golden_ratio * (b - a)
     f_x1 = float(func(x1))
     f_x2 = float(func(x2))
-    
+
     while (b - a) > tol and k < 100:
         k += 1
         
         iterations.append({
-            'k': k,
-            'a': float(a),
-            'b': float(b),
-            'x1': float(x1),
-            'x2': float(x2),
-            'f_x1': f_x1,
-            'f_x2': f_x2,
+            'k': k, 'a': float(a), 'b': float(b),
+            'x1': float(x1), 'x2': float(x2),
+            'f_x1': f_x1, 'f_x2': f_x2,
             'interval': float(b - a)
         })
         
@@ -84,77 +77,61 @@ def golden_section_search(func_str, a, b, tol=1e-4):
         'x_min': float(x_min),
         'f_min': f_min,
         'iterations': iterations,
-        'num_iterations': k,
-        'tolerance': tol,
-        'function': func_str,
-        'bounds': {'a': float(original_a), 'b': float(original_b)},
-        'success': True
+        'num_iterations': k
     }
-
 
 def create_plot(func_str, bounds, iterations, x_min, f_min):
     """
-    Generates a Plotly graph of the function, search bounds, and minimum.
+    Generates a plot of the function, search interval, and minimum point.
     
     Args:
-        func_str (str): The mathematical function.
-        bounds (tuple): The initial (a, b) bounds.
-        iterations (list): A list of iteration dictionaries from the search.
-        x_min (float): The calculated minimum x-value.
-        f_min (float): The calculated minimum function value.
+        func_str (str): The function expression.
+        bounds (tuple): The initial (a, b) search bounds.
+        iterations (list): A list of dictionaries with iteration data.
+        x_min (float): The calculated x-coordinate of the minimum.
+        f_min (float): The calculated function value at the minimum.
         
     Returns:
-        str: A base64 encoded PNG image of the plot.
+        str: A base64 encoded string of the plot image.
     """
-    import matplotlib
-    matplotlib.use('Agg') # Use a non-interactive backend
-    import matplotlib.pyplot as plt
-    import io
-    import base64
+    try:
+        x = symbols('x')
+        expr = sympify(func_str)
+        func = lambdify(x, expr, 'numpy')
+    except Exception as e:
+        raise ValueError(f"Invalid function for plotting: {str(e)}")
 
     a, b = bounds
-    x = symbols('x')
-    expr = sympify(func_str)
-    func = lambdify(x, expr, 'numpy')
-
-    # Generate points for the function curve
-    x_vals = np.linspace(a - (b-a)*0.2, b + (b-a)*0.2, 400)
+    x_vals = np.linspace(a - 0.1 * (b - a), b + 0.1 * (b - a), 400)
     y_vals = func(x_vals)
 
-    plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(10, 6))
-
+    
     # Plot the function
-    ax.plot(x_vals, y_vals, label=f'$f(x) = {func_str}$', color='royalblue', linewidth=2)
+    ax.plot(x_vals, y_vals, label=f'f(x) = ${func_str}$', color='royalblue', linewidth=2)
 
     # Highlight the final minimum point
-    ax.plot(x_min, f_min, 'o', color='red', markersize=10, label=f'Minimum ({x_min:.4f}, {f_min:.4f})')
-
-    # Add iteration markers
-    if iterations:
-        iter_x1 = [i['x1'] for i in iterations]
-        iter_fx1 = [i['f_x1'] for i in iterations]
-        iter_x2 = [i['x2'] for i in iterations]
-        iter_fx2 = [i['f_x2'] for i in iterations]
-        ax.plot(iter_x1, iter_fx1, 'x', color='darkorange', alpha=0.6, label='x1 points')
-        ax.plot(iter_x2, iter_fx2, '+', color='green', alpha=0.6, label='x2 points')
+    ax.plot(x_min, f_min, 'ro', markersize=8, label=f'Minimum ({x_min:.4f}, {f_min:.4f})')
+    
+    # Show initial search bounds
+    ax.axvline(x=a, color='gray', linestyle='--', label=f'Initial Bounds [{a}, {b}]')
+    ax.axvline(x=b, color='gray', linestyle='--')
 
     # Style the plot
-    ax.set_title('Golden Section Search Visualization', fontsize=16, fontweight='bold')
+    ax.set_title('Golden Section Search Visualization', fontsize=16)
     ax.set_xlabel('x', fontsize=12)
     ax.set_ylabel('f(x)', fontsize=12)
-    ax.legend(frameon=True, shadow=True)
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-    ax.axhline(0, color='black', linewidth=0.5)
-    ax.axvline(0, color='black', linewidth=0.5)
-    
+    ax.legend()
+    plt.tight_layout()
+
     # Save plot to a memory buffer
     buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight')
-    plt.close(fig)
+    plt.savefig(buf, format='png')
     buf.seek(0)
     
-    # Encode as base64
+    # Encode image to base64
     image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
     
     return image_base64

@@ -699,16 +699,18 @@
                             <!-- Quick Insert Buttons -->
                             <div class="mb-3 mt-3">
                                 <p class="text-xs font-semibold text-gray-600 mb-2">Quick Insert:</p>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^2')">x²</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^3')">x³</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^4')">x⁴</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sin')">sin</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\cos')">cos</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\tan')">tan</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('e^x')">eˣ</button>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x')">x</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('^2')">x<sup>2</sup></button>
+                                    <button type="button" class="quick-insert-btn" onclick="mathField.cmd('\\frac'); mathField.focus();">a/b</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sqrt{}')">√</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sin()')">sin</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\cos()')">cos</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\tan()')">tan</button>
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\pi')">π</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\frac')">a/b</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('e')">e</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\ln()')">ln</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\log_{10}()')">log₁₀</button>
                                 </div>
                             </div>
                             
@@ -854,36 +856,48 @@
     </div>
 
     <script>
-        let mathField;
-        let history = [];
+        // --- Configuration ---
         const API_BASE_URL = "http://127.0.0.1:8000";
+
+        let mathField;
+        // The history is now managed by the server, this array is not used.
+        // let history = []; 
+        
+        // Pyodide is no longer needed.
+        // let pyodide = null;
+        // let pyodideReady = false;
 
         // Initialize MathQuill when page loads
         $(document).ready(function() {
-            const mathInput = document.getElementById('mathInput');
-            mathField = MQ.MathField(mathInput, {
-                spaceBehavesLikeTab: true,
-                handlers: {
-                    edit: function() {
-                        // Live update if needed in the future
-                    }
-                }
-            });
-            // Set initial value
-            mathField.latex('x^4 - 14*x^3 + 60*x^2 - 70*x');
-
-            // Update history on load
-            updateHistoryDisplay();
+            const MQ = MathQuill.getInterface(2);
+            const mathFieldSpan = document.getElementById('mathInput');
             
-            // No pyodide initialization needed anymore
-            document.getElementById('pyodideStatus').textContent = 'Ready';
-            document.getElementById('pyodideStatus').classList.remove('animate-pulse');
-            document.getElementById('runButton').disabled = false;
+            mathField = MQ.MathField(mathFieldSpan, {
+                spaceBehavesLikeTab: true,
+                leftRightIntoCmdGoes: 'up',
+                restrictMismatchedBrackets: true,
+                autoCommands: 'pi theta sqrt sum prod alpha beta gamma delta',
+                autoOperatorNames: 'sin cos tan sec csc cot sinh cosh tanh ln log exp',
+            });
+            
+            mathField.latex('x^4-3*x^2+x+1');
+            mathField.focus();
+            
+            // Remove Pyodide initialization and status updates
+            const pyodideStatus = document.getElementById('pyodideStatus');
+            if (pyodideStatus) {
+                pyodideStatus.style.display = 'none';
+            }
+            
+            // Fetch initial history from the server
+            updateHistoryDisplay();
         });
 
         function insertSymbol(latex) {
-            mathField.cmd(latex);
-            mathField.focus();
+            if (mathField) {
+                mathField.write(latex);
+                mathField.focus();
+            }
         }
 
         document.getElementById('solverForm').addEventListener('submit', async (e) => {
@@ -893,87 +907,101 @@
 
         async function runSolver() {
             const button = document.getElementById('runButton');
-            const buttonText = button.querySelector('span');
-            const spinner = button.querySelector('.loading-spinner');
-
-            // Show loading state
-            button.disabled = true;
-            buttonText.textContent = 'Calculating...';
-            spinner.classList.remove('hidden');
+            const buttonText = document.getElementById('buttonText');
             
-            clearResults();
-
+            // The check for pyodideReady is no longer needed.
+            
             const funcLatex = mathField.latex();
-            const funcStr = latexToPython(funcLatex);
             const leftBound = parseFloat(document.getElementById('leftBound').value);
             const rightBound = parseFloat(document.getElementById('rightBound').value);
             const tolerance = parseFloat(document.getElementById('tolerance').value);
-            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const mode = document.getElementById('mode').value;
 
-            if (isNaN(leftBound) || isNaN(rightBound) || isNaN(tolerance)) {
-                alert('Please enter valid numbers for bounds and tolerance.');
-                // Hide loading state
-                button.disabled = false;
-                buttonText.textContent = 'Run Golden Section Search';
-                spinner.classList.add('hidden');
+            if (!funcLatex || isNaN(leftBound) || isNaN(rightBound) || isNaN(tolerance)) {
+                alert('Please fill in all fields correctly');
                 return;
             }
 
+            if (leftBound >= rightBound) {
+                alert('Left bound must be less than right bound');
+                return;
+            }
+
+            if (tolerance <= 0) {
+                alert('Tolerance must be greater than 0');
+                return;
+            }
+
+            button.disabled = true;
+            buttonText.textContent = 'Computing...';
+            // The icon is now handled by a loading spinner class, so direct manipulation is removed.
+            const originalIconHTML = document.getElementById('buttonIcon').outerHTML;
+            document.getElementById('buttonIcon').outerHTML = '<div id="buttonSpinner" class="loading-spinner"></div>';
+
+
             try {
+                let funcStr = latexToPython(funcLatex);
+                
+                console.log('Sending to API. LaTeX:', funcLatex, 'Python:', funcStr);
+
+                // Call the FastAPI backend
                 const response = await fetch(`${API_BASE_URL}/api/solve`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         func_str: funcStr,
                         a: leftBound,
                         b: rightBound,
                         tol: tolerance,
                         mode: mode
-                    }),
+                    })
                 });
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                    throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
                 }
-
+                
                 const result = await response.json();
                 
+                // The backend now handles maximization logic.
                 displayResults(result, funcLatex, mode);
-                plotGraph(result.plot_data);
+                plotGraph(result.plot_data); // Use base64 data from backend
                 
-                // The history is now managed by the backend, so we just refresh the display
+                // History is added on the backend, so we just need to refresh the display
                 await updateHistoryDisplay();
 
             } catch (error) {
-                alert('Failed to fetch. Ensure the FastAPI server is running and accessible. Error: ' + error.message);
+                alert('Error: ' + error.message);
                 console.error(error);
             } finally {
-                // Hide loading state
                 button.disabled = false;
                 buttonText.textContent = 'Run Golden Section Search';
-                spinner.classList.add('hidden');
+                const spinner = document.getElementById('buttonSpinner');
+                if (spinner) {
+                    spinner.outerHTML = originalIconHTML;
+                }
             }
         }
 
         function latexToPython(latex) {
+            // This function remains mostly the same, as it's a string conversion utility.
             let py = latex
-                .replace(/\\cdot/g, '*')
-                .replace(/\\left\(/g, '(')
-                .replace(/\\right\)/g, ')')
-                .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '(($1)/($2))')
-                .replace(/\\sqrt\{([^}]+)\}/g, 'sqrt($1)')
                 .replace(/\\sin/g, 'sin')
                 .replace(/\\cos/g, 'cos')
                 .replace(/\\tan/g, 'tan')
                 .replace(/\\log/g, 'log')
-                .replace(/\^/g, '**');
+                .replace(/\\ln/g, 'log')
+                .replace(/\\sqrt{([^}]*)}/g, 'sqrt($1)')
+                .replace(/\\sqrt/g, 'sqrt')
+                .replace(/\\frac{([^}]*)}{([^}]*)}/g, '(($1)/($2))')
+                .replace(/\\left\(/g, '(')
+                .replace(/\\right\)/g, ')')
+                .replace(/\\cdot/g, '*')
+                .replace(/\\times/g, '*')
+                .replace(/\^/g, '**')
+                .replace(/\\pi/g, 'pi');
             
-            // Handle e (Euler's number)
-            py = py.replace(/e/g, 'E');
-
             return py;
         }
 
@@ -982,15 +1010,36 @@
             const modeText = mode === 'maximize' ? 'Maximum' : 'Minimum';
             
             resultsDiv.innerHTML = `
-                <div class="space-y-3 text-gray-700">
-                    <p class="flex justify-between"><span>Function:</span> <span class="font-mono text-sm history-math">${funcLatex}</span></p>
-                    <p class="flex justify-between"><span>${modeText} Point (x):</span> <span class="font-bold text-blue-600">${result.x_min.toFixed(6)}</span></p>
-                    <p class="flex justify-between"><span>${modeText} Value (f(x)):</span> <span class="font-bold text-blue-600">${result.f_min.toFixed(6)}</span></p>
-                    <p class="flex justify-between"><span>Iterations:</span> <span class="font-bold">${result.num_iterations}</span></p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-gss-blue-dark/10 to-gss-blue-accent/10 rounded-2xl p-6 border border-gss-blue-accent/20">
+                        <div class="text-sm text-gray-600 mb-1">Optimal Point (x*)</div>
+                        <div class="text-3xl font-bold gradient-text">${result.x_min?.toFixed(6) ?? 'N/A'}</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-gss-blue-accent/10 to-gss-blue-light/10 rounded-2xl p-6 border border-gss-blue-accent/20">
+                        <div class="text-sm text-gray-600 mb-1">${modeText} Value f(x*)</div>
+                        <div class="text-3xl font-bold gradient-text">${result.f_min?.toFixed(6) ?? 'N/A'}</div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between py-2 border-b border-gray-200">
+                        <span class="text-gray-600 font-medium">Number of Iterations:</span>
+                        <span class="font-semibold text-gray-900">${result.num_iterations}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-200">
+                        <span class="text-gray-600 font-medium">Tolerance:</span>
+                        <span class="font-semibold text-gray-900">${document.getElementById('tolerance').valueAsNumber.toExponential(2)}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-200">
+                        <span class="text-gray-600 font-medium">Final Interval Width:</span>
+                        <span class="font-semibold text-gray-900">${(result.iterations[result.iterations.length - 1]?.interval || 0).toExponential(4)}</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-gray-600 font-medium">Mode:</span>
+                        <span class="font-semibold text-gray-900">${modeText}</span>
+                    </div>
                 </div>
             `;
-            // Re-render MathQuill for the history item
-            MQ.StaticMath(resultsDiv.querySelector('.history-math'));
 
             displayIterationTable(result.iterations);
         }
@@ -1001,92 +1050,130 @@
             
             tableCard.classList.remove('hidden');
             tableBody.innerHTML = iterations.map(iter => `
-                <tr class="border-b border-gray-200/50">
-                    <td class="py-3 px-4 text-center">${iter.k}</td>
-                    <td class="py-3 px-4 text-center">${iter.a.toFixed(6)}</td>
-                    <td class="py-3 px-4 text-center">${iter.b.toFixed(6)}</td>
-                    <td class="py-3 px-4 text-center">${iter.x1.toFixed(6)}</td>
-                    <td class="py-3 px-4 text-center">${iter.x2.toFixed(6)}</td>
-                    <td class="py-3 px-4 text-center">${iter.f_x1.toFixed(6)}</td>
-                    <td class="py-3 px-4 text-center">${iter.f_x2.toFixed(6)}</td>
-                    <td class="py-3 px-4 text-center">${iter.interval.toFixed(6)}</td>
+                <tr>
+                    <td class="font-semibold">${iter.k}</td>
+                    <td>${iter.a?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.b?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.x1?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.x2?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.f_x1?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.f_x2?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.interval?.toExponential(4) ?? 'N/A'}</td>
                 </tr>
             `).join('');
         }
 
+        // This function now receives a base64 image string from the backend
         function plotGraph(base64Image) {
             const container = document.getElementById('graphContainer');
+            container.innerHTML = ''; // Clear placeholder
             if (base64Image) {
-                container.innerHTML = `<img src="data:image/png;base64,${base64Image}" class="rounded-lg shadow-md mx-auto" alt="Function Plot">`;
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${base64Image}`;
+                img.alt = "Function Plot";
+                img.className = "rounded-lg shadow-md w-full h-auto";
+                container.appendChild(img);
             } else {
-                container.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-50 rounded-lg"><p class="text-gray-400">Plot could not be generated.</p></div>';
+                container.innerHTML = '<p class="text-center text-gray-500">Plot could not be generated.</p>';
             }
         }
 
+        // This function is no longer needed as history is managed by the server
+        // function addToHistory(entry) { ... }
+
         async function updateHistoryDisplay() {
+            const container = document.getElementById('historyContainer');
             try {
                 const response = await fetch(`${API_BASE_URL}/api/history`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch history.');
-                }
-                history = await response.json();
+                if (!response.ok) throw new Error('Failed to fetch history');
+                const history = await response.json();
 
-                const historyList = document.getElementById('historyList');
                 if (history.length === 0) {
-                    historyList.innerHTML = '<p class="text-gray-500 text-center py-4">No calculations yet.</p>';
-                    document.getElementById('clearHistoryBtn').classList.add('hidden');
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No computations yet in this session</p>';
                     return;
                 }
                 
-                document.getElementById('clearHistoryBtn').classList.remove('hidden');
-
-                historyList.innerHTML = history.map((entry, index) => `
-                    <div class="history-item" onclick="loadFromHistory(${index})">
-                        <div class="flex-grow">
-                            <div class="font-semibold text-gray-700 history-math">${entry.function}</div>
-                            <div class="text-sm text-gray-500">
-                                Bounds: [${entry.bounds.a}, ${entry.bounds.b}], Mode: ${entry.mode}
+                const historyHTML = history.map((entry, index) => {
+                    const historyId = `history-math-${index}`;
+                    // Note: The onclick now passes the entire entry object.
+                    return `
+                        <div class="history-item" onclick='loadFromHistory(${JSON.stringify(entry)})'>
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                                    <span>f(x) =</span>
+                                    <span id="${historyId}" class="history-math"></span>
+                                </div>
+                                <div class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                                <div>Interval: [${entry.bounds.a}, ${entry.bounds.b}]</div>
+                                <div>${entry.mode === 'maximize' ? 'Max' : 'Min'}: ${entry.f_min.toFixed(4)} at x=${entry.x_min.toFixed(4)}</div>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <div class="font-bold text-blue-600">${entry.f_min.toFixed(4)}</div>
-                            <div class="text-xs text-gray-400">${new Date(entry.timestamp || Date.now()).toLocaleString()}</div>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
                 
-                // Render MathQuill for all history items
-                $('.history-math').each(function() {
-                    MQ.StaticMath(this);
+                container.innerHTML = historyHTML;
+                
+                // Render math expressions using MathQuill
+                const MQ = MathQuill.getInterface(2);
+                history.forEach((entry, index) => {
+                    const historyId = `history-math-${index}`;
+                    const elem = document.getElementById(historyId);
+                    if (elem) {
+                        MQ.StaticMath(elem).latex(entry.function);
+                    }
                 });
-
             } catch (error) {
-                console.error("Could not update history:", error);
-                const historyList = document.getElementById('historyList');
-                historyList.innerHTML = '<p class="text-red-500 text-center py-4">Error loading history.</p>';
+                console.error('Could not update history:', error);
+                container.innerHTML = '<p class="text-red-500 text-center py-8">Could not load history</p>';
             }
         }
 
-        function loadFromHistory(index) {
-            const entry = history[index];
+        function loadFromHistory(entry) {
             mathField.latex(entry.function);
             document.getElementById('leftBound').value = entry.bounds.a;
             document.getElementById('rightBound').value = entry.bounds.b;
-            document.getElementById('tolerance').value = entry.tolerance || 1e-4;
-            document.querySelector(`input[name="mode"][value="${entry.mode}"]`).checked = true;
-
+            document.getElementById('tolerance').value = entry.tolerance;
+            document.getElementById('mode').value = entry.mode;
+            
+            // We can re-display the results from the history entry directly
             displayResults(entry, entry.function, entry.mode);
             plotGraph(entry.plot_data);
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function clearResults() {
-            document.getElementById('resultsContent').innerHTML = '<p class="text-gray-500">Results will be shown here.</p>';
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    <p class="text-lg">No results yet. Run the solver to see results.</p>
+                </div>
+            `;
+            
+            document.getElementById('graphContainer').innerHTML = `
+                <div class="flex items-center justify-center h-[400px] text-gray-500">
+                    <div class="text-center">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                        </svg>
+                        <p class="text-lg">Graph will appear here after running the solver</p>
+                    </div>
+                </div>
+            `;
+            
             document.getElementById('iterationTableCard').classList.add('hidden');
-            document.getElementById('iterationTableBody').innerHTML = '';
-            document.getElementById('graphContainer').innerHTML = '<div class="flex items-center justify-center h-full bg-gray-50 rounded-lg"><p class="text-gray-400">Graph will appear here.</p></div>';
         }
 
         function showClearHistoryModal() {
+            // Check if there's anything to clear first by checking the DOM
+            if (document.getElementById('historyContainer').textContent.includes('No computations')) {
+                alert('History is already empty');
+                return;
+            }
             document.getElementById('clearHistoryModal').classList.add('active');
         }
 
@@ -1097,31 +1184,34 @@
         async function confirmClearHistory() {
             try {
                 await fetch(`${API_BASE_URL}/api/history`, { method: 'DELETE' });
-                history = [];
-                updateHistoryDisplay();
-                clearResults();
+                await updateHistoryDisplay();
             } catch (error) {
-                console.error("Failed to clear history:", error);
-                alert("Error clearing history on the server.");
+                console.error('Failed to clear history:', error);
+                alert('Could not clear history on the server.');
             } finally {
                 closeModal();
             }
         }
 
         function togglePanel() {
-            document.getElementById('sidePanel').classList.toggle('active');
-            document.getElementById('panelOverlay').classList.toggle('active');
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('panelOverlay');
             document.body.classList.toggle('panel-open');
+            panel.classList.toggle('active');
+            overlay.classList.toggle('active');
         }
 
         function closePanel() {
-            document.getElementById('sidePanel').classList.remove('active');
-            document.getElementById('panelOverlay').classList.remove('active');
+            const panel = document.getElementById('sidePanel');
+            const overlay = document.getElementById('panelOverlay');
+
             document.body.classList.remove('panel-open');
+            panel.classList.remove('active');
+            overlay.classList.remove('active');
         }
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === "Escape") {
+            if (e.key === 'Escape') {
                 closePanel();
                 closeModal();
             }
@@ -1129,7 +1219,7 @@
 
         // Close modal when clicking overlay
         document.getElementById('clearHistoryModal').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
+            if (e.target.id === 'clearHistoryModal') {
                 closeModal();
             }
         });

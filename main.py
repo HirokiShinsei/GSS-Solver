@@ -97,7 +97,7 @@ def solve_function(data: SolverInput):
         }
 
         # Add to session history
-        history_entry = {**response_data, "function": data.func_str, "bounds": {"a": data.a, "b": data.b}, "mode": data.mode}
+        history_entry = {**response_data, "function": data.func_str, "bounds": {"a": data.a, "b": data.b}, "mode": data.mode, "tolerance": data.tol}
         session_history.insert(0, history_entry)
 
         return response_data
