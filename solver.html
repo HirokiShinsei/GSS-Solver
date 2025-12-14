@@ -12,9 +12,6 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.js"></script>
     
-    <!-- Pyodide for Python execution -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
-    
     <script>
         tailwind.config = {
             theme: {
@@ -595,11 +592,7 @@
             <div class="flex justify-between items-center h-20">
                 <div class="flex-shrink-0">
                     <a href="index.html" class="flex items-center group">
-                        <div class="logo-placeholder">
-                            <svg class="w-6 h-6 text-gss-blue-accent opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                        </div>
+                        <img class="h-12 w-auto" src="logo.png" alt="Logo">
                     </a>
                 </div>
 
@@ -628,11 +621,9 @@
     <div class="side-panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
     <div class="side-panel" id="sidePanel">
         <div class="side-panel-header">
-            <div class="logo-placeholder">
-                <svg class="w-6 h-6 text-gss-blue-accent opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-            </div>
+            <a href="index.html" class="flex items-center group">
+                <img class="h-12 w-auto" src="logo.png" alt="Logo">
+            </a>
             <button class="close-panel" onclick="closePanel()">
                 <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -675,13 +666,7 @@
             <h1 class="text-4xl font-bold gradient-text mb-2">Golden Section Search Solver</h1>
             <p class="text-gray-600">Find the minimum of any unimodal function without derivatives</p>
             
-            <!-- Pyodide Loading Status -->
-            <div id="pyodideStatus" class="pyodide-loading mt-4">
-                <div class="flex items-center gap-2">
-                    <div class="loading-spinner" style="border-color: #f59e0b; border-top-color: transparent;"></div>
-                    <span class="text-sm font-medium text-yellow-700">Loading Python environment...</span>
-                </div>
-            </div>
+
         </div>
 
         <!-- Main Grid Layout -->
@@ -697,21 +682,30 @@
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 Function f(x)
                             </label>
-                            <span id="mathInput"></span>
+                            <div class="relative flex items-center">
+                                <span id="mathInput" class="flex-1"></span>
+                                <button type="button" id="clearMathInput" aria-label="Clear input" class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 hover:text-gray-700 rounded-full w-9 h-9 transition-colors focus:outline-none focus:ring-2 focus:ring-gss-blue-accent" style="z-index:2;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                             
                             <!-- Quick Insert Buttons -->
                             <div class="mb-3 mt-3">
                                 <p class="text-xs font-semibold text-gray-600 mb-2">Quick Insert:</p>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^2')">x²</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^3')">x³</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x^4')">x⁴</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sin')">sin</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\cos')">cos</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\tan')">tan</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('e^x')">eˣ</button>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('x')">x</button>
+                                    <button type="button" class="quick-insert-btn" onclick="mathField.cmd('^'); mathField.focus();">x<sup>□</sup></button>
+                                    <button type="button" class="quick-insert-btn" onclick="mathField.cmd('\\frac'); mathField.focus();">a/b</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sqrt{}')">√</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sin()')">sin</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\cos()')">cos</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\tan()')">tan</button>
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\pi')">π</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\frac')">a/b</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('e')">e</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\ln()')">ln</button>
+                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\log_{10}()')">log₁₀</button>
                                 </div>
                             </div>
                             
@@ -719,12 +713,12 @@
                             <div class="guide-box">
                                 <p class="text-xs font-semibold text-gss-blue-accent mb-2">💡 Formatting Guide:</p>
                                 <div class="text-xs text-gray-700 space-y-1">
-                                    <div><span class="info-badge">x^2</span> or <span class="info-badge">x**2</span> Power/Exponent</div>
+                                    <div><span class="info-badge">x^2</span> Power/Exponent (use <b>x<sup>□</sup></b> button or type <b>^</b>)</div>
+                                    <div><span class="info-badge">2x</span> Implicit multiplication (no asterisk needed)</div>
                                     <div><span class="info-badge">7/8</span> Simple fraction (auto-converts)</div>
-                                    <div><span class="info-badge">\sqrt</span> then type - Square root</div>
-                                    <div><span class="info-badge">\frac</span> then type - Proper fraction</div>
+                                    <div><span class="info-badge">\sqrt</span> then type – Square root</div>
+                                    <div><span class="info-badge">\frac</span> then type – Proper fraction</div>
                                     <div><span class="info-badge">\sin</span> <span class="info-badge">\cos</span> Trig functions</div>
-                                    <div><span class="info-badge">*</span> Multiplication (can be implicit: 2x)</div>
                                 </div>
                             </div>
                         </div>
@@ -857,100 +851,61 @@
     </div>
 
     <script>
+        // --- Configuration ---
+        const API_BASE_URL = "https://jovsb-gss-solver.hf.space";
+        const HISTORY_STORAGE_KEY = "gss_solver_history";
+        const MAX_HISTORY_ENTRIES = 20;
+
         let mathField;
-        let history = [];
-        let pyodide = null;
-        let pyodideReady = false;
-
-        // Initialize Pyodide
-        async function initPyodide() {
+        // History is now managed client-side using localStorage
+        let sessionHistory = [];
+        
+        // Load history from localStorage on page load
+        function loadHistoryFromStorage() {
             try {
-                pyodide = await loadPyodide();
-                await pyodide.loadPackage(['numpy', 'scipy', 'sympy']);
-                
-                // Load the GSS solver Python code
-                await pyodide.runPythonAsync(`
-                    import numpy as np
-                    from scipy.optimize import minimize_scalar
-                    from sympy import symbols, sympify, lambdify
-
-                    def golden_section_search(func_str, a, b, tol=1e-4):
-                        """Golden Section Search implementation"""
-                        golden_ratio = 0.381966
-                        iterations = []
-                        k = 0
-                        
-                        # Parse function
-                        x = symbols('x')
-                        expr = sympify(func_str)
-                        func = lambdify(x, expr, modules=['numpy'])
-                        
-                        # Validate bounds
-                        if a >= b:
-                            raise ValueError("Left bound must be less than right bound")
-                        
-                        # GSS algorithm
-                        while (b - a) > tol and k < 100:
-                            k += 1
-                            x1 = a + (1 - golden_ratio) * (b - a)
-                            x2 = a + golden_ratio * (b - a)
-                            
-                            f_x1 = float(func(x1))
-                            f_x2 = float(func(x2))
-                            
-                            iterations.append({
-                                'k': k,
-                                'a': float(a),
-                                'b': float(b),
-                                'x1': float(x1),
-                                'x2': float(x2),
-                                'f_x1': f_x1,
-                                'f_x2': f_x2,
-                                'interval': float(b - a)
-                            })
-                            
-                            if f_x1 < f_x2:
-                                b = x2
-                            else:
-                                a = x1
-                        
-                        x_min = (a + b) / 2
-                        f_min = float(func(x_min))
-                        
-                        return {
-                            'x_min': float(x_min),
-                            'f_min': f_min,
-                            'iterations': iterations,
-                            'num_iterations': k,
-                            'tolerance': tol
-                        }
-                    `);
-                    
-                    pyodideReady = true;
-                    document.getElementById('pyodideStatus').innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span class="text-sm font-medium text-green-700">Python environment ready!</span>
-                        </div>
-                `;
-                setTimeout(() => {
-                    document.getElementById('pyodideStatus').style.display = 'none';
-                }, 3000);
-                
-                console.log('Pyodide initialized successfully');
-            } catch (error) {
-                console.error('Failed to initialize Pyodide:', error);
-                document.getElementById('pyodideStatus').innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        <span class="text-sm font-medium text-red-700">Failed to load Python environment</span>
-                    </div>
-                `;
+                const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+                if (stored) {
+                    sessionHistory = JSON.parse(stored);
+                } else {
+                    sessionHistory = [];
+                }
+            } catch (e) {
+                console.error('Failed to load history from localStorage:', e);
+                sessionHistory = [];
             }
+        }
+        
+        // Save history to localStorage
+        function saveHistoryToStorage() {
+            try {
+                localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(sessionHistory));
+            } catch (e) {
+                console.error('Failed to save history to localStorage:', e);
+            }
+        }
+        
+        // Add entry to history (client-side)
+        function addToHistory(entry) {
+            // Don't store plot_data in history to save space
+            const historyEntry = {
+                function: entry.function,
+                bounds: entry.bounds,
+                tolerance: entry.tolerance,
+                mode: entry.mode,
+                x_min: entry.x_min,
+                f_min: entry.f_min,
+                num_iterations: entry.num_iterations,
+                timestamp: new Date().toISOString()
+            };
+            
+            sessionHistory.unshift(historyEntry);
+            
+            // Limit history size
+            if (sessionHistory.length > MAX_HISTORY_ENTRIES) {
+                sessionHistory = sessionHistory.slice(0, MAX_HISTORY_ENTRIES);
+            }
+            
+            saveHistoryToStorage();
         }
 
         // Initialize MathQuill when page loads
@@ -966,16 +921,26 @@
                 autoOperatorNames: 'sin cos tan sec csc cot sinh cosh tanh ln log exp',
             });
             
-            mathField.latex('x^4-3*x^2+x+1');
+            mathField.latex('x^4-3x^2+x+1');
             mathField.focus();
             
-            // Initialize Pyodide
-            initPyodide();
+            // Clear input button handler
+            $('#clearMathInput').on('click', function(e) {
+                e.preventDefault();
+                if (mathField) {
+                    mathField.latex('');
+                    mathField.focus();
+                }
+            });
+
+            // Load history from localStorage and display
+            loadHistoryFromStorage();
+            updateHistoryDisplay();
         });
 
         function insertSymbol(latex) {
             if (mathField) {
-                mathField.cmd(latex);
+                mathField.write(latex);
                 mathField.focus();
             }
         }
@@ -988,12 +953,8 @@
         async function runSolver() {
             const button = document.getElementById('runButton');
             const buttonText = document.getElementById('buttonText');
-            const buttonIcon = document.getElementById('buttonIcon');
             
-            if (!pyodideReady) {
-                alert('Python environment is still loading. Please wait a moment and try again.');
-                return;
-            }
+            // The check for pyodideReady is no longer needed.
             
             const funcLatex = mathField.latex();
             const leftBound = parseFloat(document.getElementById('leftBound').value);
@@ -1018,42 +979,51 @@
 
             button.disabled = true;
             buttonText.textContent = 'Computing...';
-            buttonIcon.outerHTML = '<div class="loading-spinner"></div>';
+            // The icon is now handled by a loading spinner class, so direct manipulation is removed.
+            const originalIconHTML = document.getElementById('buttonIcon').outerHTML;
+            document.getElementById('buttonIcon').outerHTML = '<div id="buttonSpinner" class="loading-spinner"></div>';
+
 
             try {
                 let funcStr = latexToPython(funcLatex);
                 
-                console.log('Original LaTeX:', funcLatex);
-                console.log('Converted Python:', funcStr);
-                
-                if (mode === 'maximize') {
-                    funcStr = `-1*(${funcStr})`;
-                }
+                console.log('Sending to API. LaTeX:', funcLatex, 'Python:', funcStr);
 
-                // Run GSS using Pyodide (Python)
-                const resultJson = await pyodide.runPythonAsync(`
-import json
-result = golden_section_search("${funcStr.replace(/"/g, '\\"')}", ${leftBound}, ${rightBound}, ${tolerance})
-json.dumps(result)
-                `);
-                
-                const result = JSON.parse(resultJson);
-                
-                if (mode === 'maximize') {
-                    result.f_min = -result.f_min;
-                }
+                // Call the FastAPI backend
+                const response = await fetch(`${API_BASE_URL}/api/solve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        func_str: funcStr,
+                        a: leftBound,
+                        b: rightBound,
+                        tol: tolerance,
+                        mode: mode
+                    })
+                });
 
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                // The backend now handles maximization logic.
                 displayResults(result, funcLatex, mode);
-                plotGraph(latexToPython(funcLatex), leftBound, rightBound, result, mode);
+                plotGraph(result.plot_data, result.iterations, result.x_min, result.f_min, mode);
                 
+                // Add to client-side history
                 addToHistory({
                     function: funcLatex,
-                    bounds: [leftBound, rightBound],
+                    bounds: { a: leftBound, b: rightBound },
                     tolerance: tolerance,
                     mode: mode,
-                    result: result,
-                    timestamp: new Date()
+                    x_min: result.x_min,
+                    f_min: result.f_min,
+                    num_iterations: result.num_iterations
                 });
+                updateHistoryDisplay();
 
             } catch (error) {
                 alert('Error: ' + error.message);
@@ -1061,17 +1031,16 @@ json.dumps(result)
             } finally {
                 button.disabled = false;
                 buttonText.textContent = 'Run Golden Section Search';
-                document.querySelector('.loading-spinner').outerHTML = `
-                    <svg id="buttonIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                `;
+                const spinner = document.getElementById('buttonSpinner');
+                if (spinner) {
+                    spinner.outerHTML = originalIconHTML;
+                }
             }
         }
 
         function latexToPython(latex) {
+            // This function remains mostly the same, as it's a string conversion utility.
             let py = latex
-                .replace(/\s+/g, '')
                 .replace(/\\sin/g, 'sin')
                 .replace(/\\cos/g, 'cos')
                 .replace(/\\tan/g, 'tan')
@@ -1080,16 +1049,18 @@ json.dumps(result)
                 .replace(/\\sqrt{([^}]*)}/g, 'sqrt($1)')
                 .replace(/\\sqrt/g, 'sqrt')
                 .replace(/\\frac{([^}]*)}{([^}]*)}/g, '(($1)/($2))')
-                .replace(/\\left/g, '')
-                .replace(/\\right/g, '')
+                .replace(/\\left\(/g, '(')
+                .replace(/\\right\)/g, ')')
                 .replace(/\\cdot/g, '*')
                 .replace(/\\times/g, '*')
                 .replace(/\^/g, '**')
-                .replace(/(\d)([a-z])/gi, '$1*$2')
-                .replace(/\)([a-z\(])/gi, ')*$1')
-                .replace(/([a-z])(\d)/gi, '$1*$2')
-                .replace(/\\/g, '');
-            
+                .replace(/\\pi/g, 'pi');
+
+            // 1. Number followed by variable or function: 2x -> 2*x, 3sin(x) -> 3*sin(x)
+            py = py.replace(/(\d)([a-zA-Z(])/g, '$1*$2');
+            // 2. Variable or closing parenthesis followed by variable or function: xsin(x), )x, x(, )sin(x)
+            py = py.replace(/([a-zA-Z0-9_\)])([a-zA-Z(])/g, '$1*$2');
+
             return py;
         }
 
@@ -1101,11 +1072,11 @@ json.dumps(result)
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="bg-gradient-to-br from-gss-blue-dark/10 to-gss-blue-accent/10 rounded-2xl p-6 border border-gss-blue-accent/20">
                         <div class="text-sm text-gray-600 mb-1">Optimal Point (x*)</div>
-                        <div class="text-3xl font-bold gradient-text">${result.x_min.toFixed(6)}</div>
+                        <div class="text-3xl font-bold gradient-text">${result.x_min?.toFixed(6) ?? 'N/A'}</div>
                     </div>
                     <div class="bg-gradient-to-br from-gss-blue-accent/10 to-gss-blue-light/10 rounded-2xl p-6 border border-gss-blue-accent/20">
                         <div class="text-sm text-gray-600 mb-1">${modeText} Value f(x*)</div>
-                        <div class="text-3xl font-bold gradient-text">${result.f_min.toFixed(6)}</div>
+                        <div class="text-3xl font-bold gradient-text">${result.f_min?.toFixed(6) ?? 'N/A'}</div>
                     </div>
                 </div>
                 
@@ -1116,7 +1087,7 @@ json.dumps(result)
                     </div>
                     <div class="flex justify-between py-2 border-b border-gray-200">
                         <span class="text-gray-600 font-medium">Tolerance:</span>
-                        <span class="font-semibold text-gray-900">${result.tolerance.toExponential(2)}</span>
+                        <span class="font-semibold text-gray-900">${document.getElementById('tolerance').valueAsNumber.toExponential(2)}</span>
                     </div>
                     <div class="flex justify-between py-2 border-b border-gray-200">
                         <span class="text-gray-600 font-medium">Final Interval Width:</span>
@@ -1140,174 +1111,198 @@ json.dumps(result)
             tableBody.innerHTML = iterations.map(iter => `
                 <tr>
                     <td class="font-semibold">${iter.k}</td>
-                    <td>${iter.a.toFixed(6)}</td>
-                    <td>${iter.b.toFixed(6)}</td>
-                    <td>${iter.x1.toFixed(6)}</td>
-                    <td>${iter.x2.toFixed(6)}</td>
-                    <td>${iter.f_x1.toFixed(6)}</td>
-                    <td>${iter.f_x2.toFixed(6)}</td>
-                    <td>${iter.interval.toExponential(4)}</td>
+                    <td>${iter.a?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.b?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.x1?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.x2?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.f_x1?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.f_x2?.toFixed(6) ?? 'N/A'}</td>
+                    <td>${iter.interval?.toExponential(4) ?? 'N/A'}</td>
                 </tr>
             `).join('');
         }
 
-        function plotGraph(funcStr, a, b, result, mode) {
+        function plotGraph(plotData, iterations, xMin, fMin, mode) {
             const container = document.getElementById('graphContainer');
             
-            const range = b - a;
-            const xMin = a - range * 0.2;
-            const xMax = b + range * 0.2;
-            const xValues = [];
-            const yValues = [];
             
-            for (let x = xMin; x <= xMax; x += (xMax - xMin) / 500) {
-                xValues.push(x);
-                try {
-                    let expression = funcStr.replace(/x/g, `(${x})`).replace(/\*\*/g, '^');
-                    const y = eval(expression.replace(/\^/g, '**').replace(/sqrt/g, 'Math.sqrt').replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/tan/g, 'Math.tan').replace(/log/g, 'Math.log').replace(/exp/g, 'Math.exp'));
-                    yValues.push(y);
-                } catch (e) {
-                    yValues.push(null);
-                }
+            container.innerHTML = '';
+            
+            if (!plotData || !plotData.x || !plotData.y) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-20">Plot could not be generated.</p>';
+                return;
             }
             
+            // Get bounds and minimum from current form/results
+            const leftBound = parseFloat(document.getElementById('leftBound').value);
+            const rightBound = parseFloat(document.getElementById('rightBound').value);
+            const modeText = mode === 'maximize' ? 'Maximum' : 'Minimum';
+            
+            // Main function curve
             const traces = [
                 {
-                    x: xValues,
-                    y: yValues,
-                    type: 'scatter',
+                    x: plotData.x,
+                    y: plotData.y,
                     mode: 'lines',
                     name: 'f(x)',
-                    line: { color: '#0055b8', width: 3 }
-                },
-                {
-                    x: [result.x_min],
-                    y: [result.f_min],
-                    type: 'scatter',
-                    mode: 'markers',
-                    name: mode === 'maximize' ? 'Maximum' : 'Minimum',
-                    marker: {
-                        color: '#16a34a',
-                        size: 15,
-                        symbol: 'star'
-                    }
+                    line: { color: '#0073e6', width: 3 },
+                    hovertemplate: '<b>x:</b> %{x:.6f}<br><b>f(x):</b> %{y:.6f}<extra></extra>'
                 }
             ];
             
-            const iterationsToShow = Math.min(5, result.iterations.length);
-            for (let i = 0; i < iterationsToShow; i++) {
-                const iter = result.iterations[i];
-                const opacity = 0.3 + (i / iterationsToShow) * 0.5;
+            // Add iteration points if available
+            if (iterations && iterations.length > 0) {
+                // Collect all x1, x2 points from iterations
+                const iterX1 = [];
+                const iterY1 = [];
+                const iterX2 = [];
+                const iterY2 = [];
+                const iterLabels1 = [];
+                const iterLabels2 = [];
                 
-                traces.push({
-                    x: [iter.x1, iter.x2],
-                    y: [iter.f_x1, iter.f_x2],
-                    type: 'scatter',
-                    mode: 'markers',
-                    name: `Iteration ${iter.k}`,
-                    marker: {
-                        color: `rgba(255, 163, 77, ${opacity})`,
-                        size: 8
-                    },
-                    showlegend: i < 3
+                iterations.forEach((iter, idx) => {
+                    if (iter.x1 !== undefined && iter.f_x1 !== undefined) {
+                        iterX1.push(iter.x1);
+                        iterY1.push(iter.f_x1);
+                        iterLabels1.push(`Iter ${iter.k}: x₁`);
+                    }
+                    if (iter.x2 !== undefined && iter.f_x2 !== undefined) {
+                        iterX2.push(iter.x2);
+                        iterY2.push(iter.f_x2);
+                        iterLabels2.push(`Iter ${iter.k}: x₂`);
+                    }
                 });
+                
+                // Add x1 points trace (golden ratio left points)
+                if (iterX1.length > 0) {
+                    traces.push({
+                        x: iterX1,
+                        y: iterY1,
+                        mode: 'markers',
+                        name: 'x₁ points',
+                        marker: { 
+                            color: '#f97316', 
+                            size: 8, 
+                            symbol: 'circle',
+                            line: { color: '#fff', width: 1 }
+                        },
+                        text: iterLabels1,
+                        hovertemplate: '<b>%{text}</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>'
+                    });
+                }
+                
+                // Add x2 points trace (golden ratio right points)
+                if (iterX2.length > 0) {
+                    traces.push({
+                        x: iterX2,
+                        y: iterY2,
+                        mode: 'markers',
+                        name: 'x₂ points',
+                        marker: { 
+                            color: '#22c55e', 
+                            size: 8, 
+                            symbol: 'diamond',
+                            line: { color: '#fff', width: 1 }
+                        },
+                        text: iterLabels2,
+                        hovertemplate: '<b>%{text}</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>'
+                    });
+                }
             }
             
+            // Add final minimum/maximum point marker (on top)
+            traces.push({
+                x: [xMin],
+                y: [fMin],
+                mode: 'markers',
+                name: `${modeText} (${xMin.toFixed(4)}, ${fMin.toFixed(4)})`,
+                marker: { 
+                    color: '#ef4444', 
+                    size: 14, 
+                    symbol: 'star',
+                    line: { color: '#fff', width: 2 }
+                },
+                hovertemplate: `<b>${modeText}</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>`
+            });
+            
+            // Add vertical lines for initial bounds
             const layout = {
-                title: {
-                    text: mode === 'maximize' ? 'Function Maximization' : 'Function Minimization',
-                    font: { size: 18, family: 'Inter', weight: 600 }
+                title: 'Golden Section Search Visualization',
+                xaxis: { 
+                    title: 'x', 
+                    zeroline: false,
+                    showline: true,
+                    linewidth: 1,
+                    linecolor: '#ccc'
                 },
-                xaxis: {
-                    title: 'x',
-                    gridcolor: 'rgba(0, 115, 230, 0.1)',
-                    zeroline: true
+                yaxis: { 
+                    title: 'f(x)', 
+                    zeroline: false,
+                    showline: true,
+                    linewidth: 1,
+                    linecolor: '#ccc'
                 },
-                yaxis: {
-                    title: 'f(x)',
-                    gridcolor: 'rgba(0, 115, 230, 0.1)',
-                    zeroline: true
-                },
+                shapes: [
+                    // Left bound line
+                    {
+                        type: 'line',
+                        x0: leftBound,
+                        x1: leftBound,
+                        y0: Math.min(...plotData.y),
+                        y1: Math.max(...plotData.y),
+                        line: { color: '#999', width: 1, dash: 'dash' }
+                    },
+                    // Right bound line
+                    {
+                        type: 'line',
+                        x0: rightBound,
+                        x1: rightBound,
+                        y0: Math.min(...plotData.y),
+                        y1: Math.max(...plotData.y),
+                        line: { color: '#999', width: 1, dash: 'dash' }
+                    }
+                ],
+                margin: { l: 60, r: 40, t: 60, b: 60 },
                 hovermode: 'closest',
-                dragmode: 'pan',
-                plot_bgcolor: 'rgba(255, 255, 255, 0)',
-                paper_bgcolor: 'rgba(255, 255, 255, 0)',
-                margin: { t: 50, r: 20, b: 50, l: 60 },
-                font: { family: 'Inter' },
-                showlegend: true,
-                legend: {
-                    x: 0,
-                    xanchor: 'left',
-                    y: 1,
-                    yanchor: 'top',
-                    bgcolor: 'rgba(255, 255, 255, 0.9)',
-                    bordercolor: 'rgba(0, 115, 230, 0.2)',
+                plot_bgcolor: 'rgba(255,255,255,0.95)',
+                paper_bgcolor: 'white',
+                font: { family: 'Inter, sans-serif', size: 12, color: '#333' },
+                legend: { 
+                    x: 0.01,           // Upper left
+                    y: 0.99,           // Upper left
+                    bgcolor: 'rgba(255,255,255,0.8)',
+                    bordercolor: '#ccc',
                     borderwidth: 1
-                }
+                },
+                dragmode: 'pan'         // Default to pan mode
             };
             
             const config = {
                 responsive: true,
                 displayModeBar: true,
-                modeBarButtonsToAdd: [
-                    {
-                        name: 'Zoom In',
-                        icon: {
-                            width: 500,
-                            height: 600,
-                            path: 'M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM184 296c0 13.3 10.7 24 24 24s24-10.7 24-24V232h64c13.3 0 24-10.7 24-24s-10.7-24-24-24H232V120c0-13.3-10.7-24-24-24s-24 10.7-24 24v64H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h64v64z',
-                            transform: 'matrix(1 0 0 -1 0 512)'
-                        },
-                        click: function(gd) {
-                            Plotly.relayout(gd, {
-                                'xaxis.range[0]': gd.layout.xaxis.range[0] * 0.8,
-                                'xaxis.range[1]': gd.layout.xaxis.range[1] * 0.8,
-                                'yaxis.range[0]': gd.layout.yaxis.range[0] * 0.8,
-                                'yaxis.range[1]': gd.layout.yaxis.range[1] * 0.8
-                            });
-                        }
-                    },
-                    {
-                        name: 'Zoom Out',
-                        icon: {
-                            width: 500,
-                            height: 600,
-                            path: 'M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM184 232H120c-13.3 0-24-10.7-24-24s10.7-24 24-24h64 64c13.3 0 24 10.7 24 24s-10.7 24-24 24H184z',
-                            transform: 'matrix(1 0 0 -1 0 512)'
-                        },
-                        click: function(gd) {
-                            Plotly.relayout(gd, {
-                                'xaxis.range[0]': gd.layout.xaxis.range[0] * 1.2,
-                                'xaxis.range[1]': gd.layout.xaxis.range[1] * 1.2,
-                                'yaxis.range[0]': gd.layout.yaxis.range[0] * 1.2,
-                                'yaxis.range[1]': gd.layout.yaxis.range[1] * 1.2
-                            });
-                        }
-                    }
-                ],
-                modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage', 'zoomIn2d', 'zoomOut2d', 'zoom2d'],
                 displaylogo: false,
-                modeBarPosition: 'top-right',
-                scrollZoom: true
+                toImageButtonOptions: {
+                    format: 'png',
+                    filename: 'gss_plot',
+                    height: 600,
+                    width: 1000,
+                    scale: 1
+                },
+                // Show only zoom in, zoom out, reset, and autoscale buttons
+                modeBarButtonsToAdd: [],
+                modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d', 'boxSelect2d']
             };
-            
-            // Clear any placeholder content first
-            container.innerHTML = '';
             
             Plotly.newPlot(container, traces, layout, config);
         }
 
-        function addToHistory(entry) {
-            history.unshift(entry);
-            if (history.length > 10) {
-                history = history.slice(0, 10);
-            }
-            updateHistoryDisplay();
-        }
+        // This function is no longer needed as history is managed by the server
+        // function addToHistory(entry) { ... }
 
         function updateHistoryDisplay() {
             const container = document.getElementById('historyContainer');
-            
+            const history = sessionHistory;
+
             if (history.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-8">No computations yet in this session</p>';
                 return;
@@ -1315,18 +1310,19 @@ json.dumps(result)
             
             const historyHTML = history.map((entry, index) => {
                 const historyId = `history-math-${index}`;
+                const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
                 return `
-                    <div class="history-item" onclick="loadFromHistory(${index})">
+                    <div class="history-item" data-index="${index}">
                         <div class="flex justify-between items-start mb-2">
                             <div class="font-semibold text-gray-900 text-sm flex items-center gap-2">
                                 <span>f(x) =</span>
                                 <span id="${historyId}" class="history-math"></span>
                             </div>
-                            <div class="text-xs text-gray-500">${entry.timestamp.toLocaleTimeString()}</div>
+                            <div class="text-xs text-gray-500">${timestamp}</div>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                            <div>Interval: [${entry.bounds[0]}, ${entry.bounds[1]}]</div>
-                            <div>${entry.mode === 'maximize' ? 'Max' : 'Min'}: ${entry.result.f_min.toFixed(4)} at x=${entry.result.x_min.toFixed(4)}</div>
+                            <div>Interval: [${entry.bounds.a}, ${entry.bounds.b}]</div>
+                            <div>${entry.mode === 'maximize' ? 'Max' : 'Min'}: ${entry.f_min.toFixed(4)} at x=${entry.x_min.toFixed(4)}</div>
                         </div>
                     </div>
                 `;
@@ -1334,26 +1330,46 @@ json.dumps(result)
             
             container.innerHTML = historyHTML;
             
+            // Add click handlers using event delegation (safer than inline onclick)
+            container.querySelectorAll('.history-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const index = parseInt(item.dataset.index);
+                    loadFromHistory(sessionHistory[index]);
+                });
+            });
+            
             // Render math expressions using MathQuill
             const MQ = MathQuill.getInterface(2);
             history.forEach((entry, index) => {
                 const historyId = `history-math-${index}`;
                 const elem = document.getElementById(historyId);
                 if (elem) {
-                    const staticMath = MQ.StaticMath(elem);
-                    staticMath.latex(entry.function);
+                    try {
+                        // Clean up the LaTeX for display (remove explicit multiplication asterisks)
+                        let cleanLatex = entry.function
+                            .replace(/\*\*/g, '^')           // Convert ** back to ^ for display
+                            .replace(/\*/g, '')              // Remove asterisks (implicit multiplication)
+                            .replace(/\\cdot\s*/g, '')       // Remove \cdot
+                            .replace(/\\times\s*/g, '');     // Remove \times
+                        MQ.StaticMath(elem).latex(cleanLatex);
+                    } catch (e) {
+                        // Fallback: show raw text if MathQuill fails
+                        elem.textContent = entry.function;
+                        console.warn('MathQuill rendering failed for:', entry.function, e);
+                    }
                 }
             });
         }
 
-        function loadFromHistory(index) {
-            const entry = history[index];
+        function loadFromHistory(entry) {
             mathField.latex(entry.function);
-            document.getElementById('leftBound').value = entry.bounds[0];
-            document.getElementById('rightBound').value = entry.bounds[1];
+            document.getElementById('leftBound').value = entry.bounds.a;
+            document.getElementById('rightBound').value = entry.bounds.b;
             document.getElementById('tolerance').value = entry.tolerance;
             document.getElementById('mode').value = entry.mode;
             
+            // Re-run the solver to get full results and plot
+            // (since we don't store iterations/plot_data in history to save space)
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -1382,7 +1398,8 @@ json.dumps(result)
         }
 
         function showClearHistoryModal() {
-            if (history.length === 0) {
+            // Check if there's anything to clear
+            if (sessionHistory.length === 0) {
                 alert('History is already empty');
                 return;
             }
@@ -1394,7 +1411,8 @@ json.dumps(result)
         }
 
         function confirmClearHistory() {
-            history = [];
+            sessionHistory = [];
+            saveHistoryToStorage();
             updateHistoryDisplay();
             closeModal();
         }
@@ -1410,6 +1428,7 @@ json.dumps(result)
         function closePanel() {
             const panel = document.getElementById('sidePanel');
             const overlay = document.getElementById('panelOverlay');
+
             document.body.classList.remove('panel-open');
             panel.classList.remove('active');
             overlay.classList.remove('active');
