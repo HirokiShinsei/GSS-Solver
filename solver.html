@@ -666,13 +666,7 @@
             <h1 class="text-4xl font-bold gradient-text mb-2">Golden Section Search Solver</h1>
             <p class="text-gray-600">Find the minimum of any unimodal function without derivatives</p>
             
-            <!-- Pyodide Loading Status -->
-            <div id="pyodideStatus" class="pyodide-loading mt-4">
-                <div class="flex items-center gap-2">
-                    <div class="loading-spinner" style="border-color: #f59e0b; border-top-color: transparent;"></div>
-                    <span class="text-sm font-medium text-yellow-700">Loading Python environment...</span>
-                </div>
-            </div>
+
         </div>
 
         <!-- Main Grid Layout -->
@@ -852,14 +846,60 @@
     <script>
         // --- Configuration ---
         const API_BASE_URL = "https://jovsb-gss-solver.hf.space";
+        const HISTORY_STORAGE_KEY = "gss_solver_history";
+        const MAX_HISTORY_ENTRIES = 20;
 
         let mathField;
-        // The history is now managed by the server, this array is not used.
-        // let history = []; 
+        // History is now managed client-side using localStorage
+        let sessionHistory = [];
         
-        // Pyodide is no longer needed.
-        // let pyodide = null;
-        // let pyodideReady = false;
+        // Load history from localStorage on page load
+        function loadHistoryFromStorage() {
+            try {
+                const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+                if (stored) {
+                    sessionHistory = JSON.parse(stored);
+                } else {
+                    sessionHistory = [];
+                }
+            } catch (e) {
+                console.error('Failed to load history from localStorage:', e);
+                sessionHistory = [];
+            }
+        }
+        
+        // Save history to localStorage
+        function saveHistoryToStorage() {
+            try {
+                localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(sessionHistory));
+            } catch (e) {
+                console.error('Failed to save history to localStorage:', e);
+            }
+        }
+        
+        // Add entry to history (client-side)
+        function addToHistory(entry) {
+            // Don't store plot_data in history to save space
+            const historyEntry = {
+                function: entry.function,
+                bounds: entry.bounds,
+                tolerance: entry.tolerance,
+                mode: entry.mode,
+                x_min: entry.x_min,
+                f_min: entry.f_min,
+                num_iterations: entry.num_iterations,
+                timestamp: new Date().toISOString()
+            };
+            
+            sessionHistory.unshift(historyEntry);
+            
+            // Limit history size
+            if (sessionHistory.length > MAX_HISTORY_ENTRIES) {
+                sessionHistory = sessionHistory.slice(0, MAX_HISTORY_ENTRIES);
+            }
+            
+            saveHistoryToStorage();
+        }
 
         // Initialize MathQuill when page loads
         $(document).ready(function() {
@@ -877,13 +917,8 @@
             mathField.latex('x^4-3*x^2+x+1');
             mathField.focus();
             
-            // Remove Pyodide initialization and status updates
-            const pyodideStatus = document.getElementById('pyodideStatus');
-            if (pyodideStatus) {
-                pyodideStatus.style.display = 'none';
-            }
-            
-            // Fetch initial history from the server
+            // Load history from localStorage and display
+            loadHistoryFromStorage();
             updateHistoryDisplay();
         });
 
@@ -960,10 +995,19 @@
                 
                 // The backend now handles maximization logic.
                 displayResults(result, funcLatex, mode);
-                plotGraph(result.plot_data); // Use base64 data from backend
+                plotGraph(result.plot_data);
                 
-                // History is added on the backend, so we just need to refresh the display
-                await updateHistoryDisplay();
+                // Add to client-side history
+                addToHistory({
+                    function: funcLatex,
+                    bounds: { a: leftBound, b: rightBound },
+                    tolerance: tolerance,
+                    mode: mode,
+                    x_min: result.x_min,
+                    f_min: result.f_min,
+                    num_iterations: result.num_iterations
+                });
+                updateHistoryDisplay();
 
             } catch (error) {
                 alert('Error: ' + error.message);
@@ -1060,8 +1104,11 @@
         function plotGraph(plotData) {
             const container = document.getElementById('graphContainer');
             
+            
+            container.innerHTML = '';
+            
             if (!plotData || !plotData.x || !plotData.y) {
-                container.innerHTML = '<p class="text-center text-gray-500">Plot could not be generated.</p>';
+                container.innerHTML = '<p class="text-center text-gray-500 py-20">Plot could not be generated.</p>';
                 return;
             }
             
@@ -1170,53 +1217,60 @@
         // This function is no longer needed as history is managed by the server
         // function addToHistory(entry) { ... }
 
-        async function updateHistoryDisplay() {
+        function updateHistoryDisplay() {
             const container = document.getElementById('historyContainer');
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/history`);
-                if (!response.ok) throw new Error('Failed to fetch history');
-                const history = await response.json();
+            const history = sessionHistory;
 
-                if (history.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No computations yet in this session</p>';
-                    return;
-                }
-                
-                const historyHTML = history.map((entry, index) => {
-                    const historyId = `history-math-${index}`;
-                    // Note: The onclick now passes the entire entry object.
-                    return `
-                        <div class="history-item" onclick='loadFromHistory(${JSON.stringify(entry)})'>
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                                    <span>f(x) =</span>
-                                    <span id="${historyId}" class="history-math"></span>
-                                </div>
-                                <div class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                                <div>Interval: [${entry.bounds.a}, ${entry.bounds.b}]</div>
-                                <div>${entry.mode === 'maximize' ? 'Max' : 'Min'}: ${entry.f_min.toFixed(4)} at x=${entry.x_min.toFixed(4)}</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                container.innerHTML = historyHTML;
-                
-                // Render math expressions using MathQuill
-                const MQ = MathQuill.getInterface(2);
-                history.forEach((entry, index) => {
-                    const historyId = `history-math-${index}`;
-                    const elem = document.getElementById(historyId);
-                    if (elem) {
-                        MQ.StaticMath(elem).latex(entry.function);
-                    }
-                });
-            } catch (error) {
-                console.error('Could not update history:', error);
-                container.innerHTML = '<p class="text-red-500 text-center py-8">Could not load history</p>';
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">No computations yet in this session</p>';
+                return;
             }
+            
+            const historyHTML = history.map((entry, index) => {
+                const historyId = `history-math-${index}`;
+                const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
+                return `
+                    <div class="history-item" data-index="${index}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                                <span>f(x) =</span>
+                                <span id="${historyId}" class="history-math"></span>
+                            </div>
+                            <div class="text-xs text-gray-500">${timestamp}</div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                            <div>Interval: [${entry.bounds.a}, ${entry.bounds.b}]</div>
+                            <div>${entry.mode === 'maximize' ? 'Max' : 'Min'}: ${entry.f_min.toFixed(4)} at x=${entry.x_min.toFixed(4)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = historyHTML;
+            
+            // Add click handlers using event delegation (safer than inline onclick)
+            container.querySelectorAll('.history-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const index = parseInt(item.dataset.index);
+                    loadFromHistory(sessionHistory[index]);
+                });
+            });
+            
+            // Render math expressions using MathQuill
+            const MQ = MathQuill.getInterface(2);
+            history.forEach((entry, index) => {
+                const historyId = `history-math-${index}`;
+                const elem = document.getElementById(historyId);
+                if (elem) {
+                    try {
+                        MQ.StaticMath(elem).latex(entry.function);
+                    } catch (e) {
+                        // Fallback: show raw text if MathQuill fails
+                        elem.textContent = entry.function;
+                        console.warn('MathQuill rendering failed for:', entry.function, e);
+                    }
+                }
+            });
         }
 
         function loadFromHistory(entry) {
@@ -1226,10 +1280,8 @@
             document.getElementById('tolerance').value = entry.tolerance;
             document.getElementById('mode').value = entry.mode;
             
-            // We can re-display the results from the history entry directly
-            displayResults(entry, entry.function, entry.mode);
-            plotGraph(entry.plot_data);
-
+            // Re-run the solver to get full results and plot
+            // (since we don't store iterations/plot_data in history to save space)
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -1258,8 +1310,8 @@
         }
 
         function showClearHistoryModal() {
-            // Check if there's anything to clear first by checking the DOM
-            if (document.getElementById('historyContainer').textContent.includes('No computations')) {
+            // Check if there's anything to clear
+            if (sessionHistory.length === 0) {
                 alert('History is already empty');
                 return;
             }
@@ -1270,16 +1322,11 @@
             document.getElementById('clearHistoryModal').classList.remove('active');
         }
 
-        async function confirmClearHistory() {
-            try {
-                await fetch(`${API_BASE_URL}/api/history`, { method: 'DELETE' });
-                await updateHistoryDisplay();
-            } catch (error) {
-                console.error('Failed to clear history:', error);
-                alert('Could not clear history on the server.');
-            } finally {
-                closeModal();
-            }
+        function confirmClearHistory() {
+            sessionHistory = [];
+            saveHistoryToStorage();
+            updateHistoryDisplay();
+            closeModal();
         }
 
         function togglePanel() {
