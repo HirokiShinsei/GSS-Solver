@@ -94,62 +94,67 @@ def golden_section_search(func_str, a, b, tol=1e-4):
 
 def create_plot(func_str, bounds, iterations, x_min, f_min):
     """
-    Create visualization of GSS process using Matplotlib.
+    Generates a Plotly graph of the function, search bounds, and minimum.
     
     Args:
-        func_str (str): Function expression
-        bounds (tuple): (a, b) search bounds
-        iterations (list): Iteration details
-        x_min (float): Minimum point found
-        f_min (float): Function value at minimum
+        func_str (str): The mathematical function.
+        bounds (tuple): The initial (a, b) bounds.
+        iterations (list): A list of iteration dictionaries from the search.
+        x_min (float): The calculated minimum x-value.
+        f_min (float): The calculated minimum function value.
         
     Returns:
-        str: Base64 encoded PNG image or None if plotting fails
+        str: A base64 encoded PNG image of the plot.
     """
-    try:
-        x = symbols('x')
-        processed_str = func_str.replace('\\', '').replace('^', '**')
-        expr = sympify(processed_str)
-        func = lambdify(x, expr, modules=['numpy'])
-        
-        a, b = bounds
-        # Widen the plot range slightly for better visualization
-        plot_a = a - (b - a) * 0.15
-        plot_b = b + (b - a) * 0.15
-        x_vals = np.linspace(plot_a, plot_b, 400)
-        y_vals = func(x_vals)
+    import matplotlib
+    matplotlib.use('Agg') # Use a non-interactive backend
+    import matplotlib.pyplot as plt
+    import io
+    import base64
 
-        # Create figure with a transparent background
-        fig, ax = plt.subplots(figsize=(10, 6))
-        fig.patch.set_alpha(0.0)
-        ax.patch.set_alpha(0.0)
+    a, b = bounds
+    x = symbols('x')
+    expr = sympify(func_str)
+    func = lambdify(x, expr, 'numpy')
 
-        # Plot function curve
-        ax.plot(x_vals, y_vals, color='#3b82f6', linewidth=2, label='f(x)')
-        
-        # Highlight minimum point
-        ax.plot(x_min, f_min, 'o', color='#10b981', markersize=10, label=f'Minimum ({x_min:.4f}, {f_min:.4f})')
-        
-        # Style the plot
-        ax.set_xlabel('x', fontsize=12, color='white')
-        ax.set_ylabel('f(x)', fontsize=12, color='white')
-        ax.tick_params(axis='x', colors='white')
-        ax.tick_params(axis='y', colors='white')
-        ax.spines['bottom'].set_color('white')
-        ax.spines['left'].set_color('white')
-        ax.spines['top'].set_color('none')
-        ax.spines['right'].set_color('none')
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='#ffffff', alpha=0.2)
-        
-        # Convert to base64
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0.1, transparent=True)
-        buffer.seek(0)
-        img_base64 = base64.b64encode(buffer.read()).decode()
-        plt.close(fig)
-        
-        return f"data:image/png;base64,{img_base64}"
-        
-    except Exception:
-        # If plotting fails for any reason, return None
-        return None
+    # Generate points for the function curve
+    x_vals = np.linspace(a - (b-a)*0.2, b + (b-a)*0.2, 400)
+    y_vals = func(x_vals)
+
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot the function
+    ax.plot(x_vals, y_vals, label=f'$f(x) = {func_str}$', color='royalblue', linewidth=2)
+
+    # Highlight the final minimum point
+    ax.plot(x_min, f_min, 'o', color='red', markersize=10, label=f'Minimum ({x_min:.4f}, {f_min:.4f})')
+
+    # Add iteration markers
+    if iterations:
+        iter_x1 = [i['x1'] for i in iterations]
+        iter_fx1 = [i['f_x1'] for i in iterations]
+        iter_x2 = [i['x2'] for i in iterations]
+        iter_fx2 = [i['f_x2'] for i in iterations]
+        ax.plot(iter_x1, iter_fx1, 'x', color='darkorange', alpha=0.6, label='x1 points')
+        ax.plot(iter_x2, iter_fx2, '+', color='green', alpha=0.6, label='x2 points')
+
+    # Style the plot
+    ax.set_title('Golden Section Search Visualization', fontsize=16, fontweight='bold')
+    ax.set_xlabel('x', fontsize=12)
+    ax.set_ylabel('f(x)', fontsize=12)
+    ax.legend(frameon=True, shadow=True)
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+    ax.axhline(0, color='black', linewidth=0.5)
+    ax.axvline(0, color='black', linewidth=0.5)
+    
+    # Save plot to a memory buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    
+    # Encode as base64
+    image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    
+    return image_base64
