@@ -1138,14 +1138,30 @@
                 plot_bgcolor: 'rgba(255,255,255,0.95)',
                 paper_bgcolor: 'white',
                 font: { family: 'Inter, sans-serif', size: 12, color: '#333' },
-                legend: { x: 0.02, y: 0.98, bgcolor: 'rgba(255,255,255,0.8)' }
+                legend: { 
+                    x: 0.01,           // Upper left
+                    y: 0.99,           // Upper left
+                    bgcolor: 'rgba(255,255,255,0.8)',
+                    bordercolor: '#ccc',
+                    borderwidth: 1
+                },
+                dragmode: 'pan'         // Default to pan mode
             };
             
             const config = {
                 responsive: true,
                 displayModeBar: true,
                 displaylogo: false,
-                modeBarButtonsToRemove: ['lasso2d', 'select2d']
+                toImageButtonOptions: {
+                    format: 'png',
+                    filename: 'gss_plot',
+                    height: 600,
+                    width: 1000,
+                    scale: 1
+                },
+                // Show only zoom in, zoom out, reset, and autoscale buttons
+                modeBarButtonsToAdd: [],
+                modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d', 'boxSelect2d']
             };
             
             Plotly.newPlot(container, traces, layout, config);
