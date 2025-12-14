@@ -1039,7 +1039,12 @@
                 .replace(/\\times/g, '*')
                 .replace(/\^/g, '**')
                 .replace(/\\pi/g, 'pi');
-            
+
+            // 1. Number followed by variable or function: 2x -> 2*x, 3sin(x) -> 3*sin(x)
+            py = py.replace(/(\d)([a-zA-Z(])/g, '$1*$2');
+            // 2. Variable or closing parenthesis followed by variable or function: xsin(x), )x, x(, )sin(x)
+            py = py.replace(/([a-zA-Z0-9_\)])([a-zA-Z(])/g, '$1*$2');
+
             return py;
         }
 
