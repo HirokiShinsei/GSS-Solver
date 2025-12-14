@@ -123,11 +123,7 @@ def clear_history():
     session_history.clear()
     return {"message": "History cleared successfully."}
 
-# --- Server Execution -----------------------------------------------------
-# To run this server, execute the following command in your terminal:
-# uvicorn main:app --reload
-#
-# Then, open your solver.html file in a browser.
+
 if __name__ == "__main__":
     import uvicorn
     print("Starting FastAPI server...")
