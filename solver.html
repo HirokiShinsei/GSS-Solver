@@ -682,14 +682,21 @@
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 Function f(x)
                             </label>
-                            <span id="mathInput"></span>
+                            <div class="relative flex items-center">
+                                <span id="mathInput" class="flex-1"></span>
+                                <button type="button" id="clearMathInput" aria-label="Clear input" class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 hover:text-gray-700 rounded-full w-9 h-9 transition-colors focus:outline-none focus:ring-2 focus:ring-gss-blue-accent" style="z-index:2;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                             
                             <!-- Quick Insert Buttons -->
                             <div class="mb-3 mt-3">
                                 <p class="text-xs font-semibold text-gray-600 mb-2">Quick Insert:</p>
                                 <div class="grid grid-cols-4 gap-2">
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('x')">x</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('^2')">x<sup>2</sup></button>
+                                    <button type="button" class="quick-insert-btn" onclick="mathField.cmd('^'); mathField.focus();">x<sup>□</sup></button>
                                     <button type="button" class="quick-insert-btn" onclick="mathField.cmd('\\frac'); mathField.focus();">a/b</button>
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sqrt{}')">√</button>
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\sin()')">sin</button>
@@ -706,12 +713,12 @@
                             <div class="guide-box">
                                 <p class="text-xs font-semibold text-gss-blue-accent mb-2">💡 Formatting Guide:</p>
                                 <div class="text-xs text-gray-700 space-y-1">
-                                    <div><span class="info-badge">x^2</span> or <span class="info-badge">x**2</span> Power/Exponent</div>
+                                    <div><span class="info-badge">x^2</span> Power/Exponent (use <b>x<sup>□</sup></b> button or type <b>^</b>)</div>
+                                    <div><span class="info-badge">2x</span> Implicit multiplication (no asterisk needed)</div>
                                     <div><span class="info-badge">7/8</span> Simple fraction (auto-converts)</div>
-                                    <div><span class="info-badge">\sqrt</span> then type - Square root</div>
-                                    <div><span class="info-badge">\frac</span> then type - Proper fraction</div>
+                                    <div><span class="info-badge">\sqrt</span> then type – Square root</div>
+                                    <div><span class="info-badge">\frac</span> then type – Proper fraction</div>
                                     <div><span class="info-badge">\sin</span> <span class="info-badge">\cos</span> Trig functions</div>
-                                    <div><span class="info-badge">*</span> Multiplication (can be implicit: 2x)</div>
                                 </div>
                             </div>
                         </div>
@@ -914,9 +921,18 @@
                 autoOperatorNames: 'sin cos tan sec csc cot sinh cosh tanh ln log exp',
             });
             
-            mathField.latex('x^4-3*x^2+x+1');
+            mathField.latex('x^4-3x^2+x+1');
             mathField.focus();
             
+            // Clear input button handler
+            $('#clearMathInput').on('click', function(e) {
+                e.preventDefault();
+                if (mathField) {
+                    mathField.latex('');
+                    mathField.focus();
+                }
+            });
+
             // Load history from localStorage and display
             loadHistoryFromStorage();
             updateHistoryDisplay();
