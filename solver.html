@@ -995,7 +995,7 @@
                 
                 // The backend now handles maximization logic.
                 displayResults(result, funcLatex, mode);
-                plotGraph(result.plot_data);
+                plotGraph(result.plot_data, result.iterations, result.x_min, result.f_min, mode);
                 
                 // Add to client-side history
                 addToHistory({
@@ -1101,7 +1101,7 @@
             `).join('');
         }
 
-        function plotGraph(plotData) {
+        function plotGraph(plotData, iterations, xMin, fMin, mode) {
             const container = document.getElementById('graphContainer');
             
             
@@ -1115,12 +1115,7 @@
             // Get bounds and minimum from current form/results
             const leftBound = parseFloat(document.getElementById('leftBound').value);
             const rightBound = parseFloat(document.getElementById('rightBound').value);
-            
-            // Find minimum point for marking
-            const minIdx = plotData.y.reduce((minIdx, val, idx) => 
-                val < plotData.y[minIdx] ? idx : minIdx, 0);
-            const minX = plotData.x[minIdx];
-            const minY = plotData.y[minIdx];
+            const modeText = mode === 'maximize' ? 'Maximum' : 'Minimum';
             
             // Main function curve
             const traces = [
@@ -1131,17 +1126,83 @@
                     name: 'f(x)',
                     line: { color: '#0073e6', width: 3 },
                     hovertemplate: '<b>x:</b> %{x:.6f}<br><b>f(x):</b> %{y:.6f}<extra></extra>'
-                },
-                // Minimum point marker
-                {
-                    x: [minX],
-                    y: [minY],
-                    mode: 'markers',
-                    name: `Minimum (${minX.toFixed(4)}, ${minY.toFixed(4)})`,
-                    marker: { color: '#ff3333', size: 10, symbol: 'circle' },
-                    hovertemplate: '<b>Minimum</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>'
                 }
             ];
+            
+            // Add iteration points if available
+            if (iterations && iterations.length > 0) {
+                // Collect all x1, x2 points from iterations
+                const iterX1 = [];
+                const iterY1 = [];
+                const iterX2 = [];
+                const iterY2 = [];
+                const iterLabels1 = [];
+                const iterLabels2 = [];
+                
+                iterations.forEach((iter, idx) => {
+                    if (iter.x1 !== undefined && iter.f_x1 !== undefined) {
+                        iterX1.push(iter.x1);
+                        iterY1.push(iter.f_x1);
+                        iterLabels1.push(`Iter ${iter.k}: x₁`);
+                    }
+                    if (iter.x2 !== undefined && iter.f_x2 !== undefined) {
+                        iterX2.push(iter.x2);
+                        iterY2.push(iter.f_x2);
+                        iterLabels2.push(`Iter ${iter.k}: x₂`);
+                    }
+                });
+                
+                // Add x1 points trace (golden ratio left points)
+                if (iterX1.length > 0) {
+                    traces.push({
+                        x: iterX1,
+                        y: iterY1,
+                        mode: 'markers',
+                        name: 'x₁ points',
+                        marker: { 
+                            color: '#f97316', 
+                            size: 8, 
+                            symbol: 'circle',
+                            line: { color: '#fff', width: 1 }
+                        },
+                        text: iterLabels1,
+                        hovertemplate: '<b>%{text}</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>'
+                    });
+                }
+                
+                // Add x2 points trace (golden ratio right points)
+                if (iterX2.length > 0) {
+                    traces.push({
+                        x: iterX2,
+                        y: iterY2,
+                        mode: 'markers',
+                        name: 'x₂ points',
+                        marker: { 
+                            color: '#22c55e', 
+                            size: 8, 
+                            symbol: 'diamond',
+                            line: { color: '#fff', width: 1 }
+                        },
+                        text: iterLabels2,
+                        hovertemplate: '<b>%{text}</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>'
+                    });
+                }
+            }
+            
+            // Add final minimum/maximum point marker (on top)
+            traces.push({
+                x: [xMin],
+                y: [fMin],
+                mode: 'markers',
+                name: `${modeText} (${xMin.toFixed(4)}, ${fMin.toFixed(4)})`,
+                marker: { 
+                    color: '#ef4444', 
+                    size: 14, 
+                    symbol: 'star',
+                    line: { color: '#fff', width: 2 }
+                },
+                hovertemplate: `<b>${modeText}</b><br>x: %{x:.6f}<br>f(x): %{y:.6f}<extra></extra>`
+            });
             
             // Add vertical lines for initial bounds
             const layout = {
@@ -1263,7 +1324,13 @@
                 const elem = document.getElementById(historyId);
                 if (elem) {
                     try {
-                        MQ.StaticMath(elem).latex(entry.function);
+                        // Clean up the LaTeX for display (remove explicit multiplication asterisks)
+                        let cleanLatex = entry.function
+                            .replace(/\*\*/g, '^')           // Convert ** back to ^ for display
+                            .replace(/\*/g, '')              // Remove asterisks (implicit multiplication)
+                            .replace(/\\cdot\s*/g, '')       // Remove \cdot
+                            .replace(/\\times\s*/g, '');     // Remove \times
+                        MQ.StaticMath(elem).latex(cleanLatex);
                     } catch (e) {
                         // Fallback: show raw text if MathQuill fails
                         elem.textContent = entry.function;
