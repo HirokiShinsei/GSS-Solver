@@ -986,6 +986,14 @@
                     mathField.latex('');
                     mathField.focus();
                 }
+                // Also clear the hidden input on mobile
+                const mathInputMobile = document.getElementById('mathInputMobile');
+                function isMobileDevice() {
+                    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                }
+                if (isMobileDevice() && mathInputMobile) {
+                    mathInputMobile.value = '';
+                }
             });
 
             // Load history from localStorage and display
