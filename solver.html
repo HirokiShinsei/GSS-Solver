@@ -592,7 +592,7 @@
             <div class="flex justify-between items-center h-20">
                 <div class="flex-shrink-0">
                     <a href="index.html" class="flex items-center group">
-                        <img class="h-12 w-auto" src="logo.png" alt="Logo">
+                        <img class="h-12 w-auto" src="assets/logo.png" alt="Logo">
                     </a>
                 </div>
 
@@ -603,7 +603,7 @@
                     <a href="solver.html" class="nav-link active text-gray-700">
                         <span class="relative z-10">Solver</span>
                     </a>
-                    <a href="index.html#about" class="nav-link text-gray-700">
+                    <a href="about-us.html" class="nav-link text-gray-700">
                         <span class="relative z-10">About Us</span>
                     </a>
                 </div>
@@ -622,7 +622,7 @@
     <div class="side-panel" id="sidePanel">
         <div class="side-panel-header">
             <a href="index.html" class="flex items-center group">
-                <img class="h-12 w-auto" src="logo.png" alt="Logo">
+                <img class="h-12 w-auto" src="assets/logo.png" alt="Logo">
             </a>
             <button class="close-panel" onclick="closePanel()">
                 <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -637,7 +637,7 @@
             <a href="solver.html" class="nav-link active text-gray-700" onclick="closePanel()">
                 <span class="relative z-10">Solver</span>
             </a>
-            <a href="index.html#about" class="nav-link text-gray-700" onclick="closePanel()">
+            <a href="about-us.html" class="nav-link text-gray-700" onclick="closePanel()">
                 <span class="relative z-10">About Us</span>
             </a>
         </div>
@@ -1039,29 +1039,56 @@
         }
 
         function latexToPython(latex) {
-            // This function remains mostly the same, as it's a string conversion utility.
+            // Robust LaTeX to Python/SymPy conversion
             let py = latex
+                // Common math symbols
+                .replace(/∫/g, 'integrate')
+                .replace(/∑/g, 'sum')
+                .replace(/π/g, '3.14159265359')
+                .replace(/θ/g, 'theta')
+                .replace(/√/g, 'sqrt')
+                // Remove curly braces from exponents and other MathQuill output
+                .replace(/\{\}/g, '')
+                .replace(/\{/g, '')
+                .replace(/\}/g, '')
+                // Convert LaTeX commands to Python/SymPy
                 .replace(/\\sin/g, 'sin')
                 .replace(/\\cos/g, 'cos')
                 .replace(/\\tan/g, 'tan')
-                .replace(/\\log/g, 'log')
+                .replace(/\\log/g, 'log10')
                 .replace(/\\ln/g, 'log')
-                .replace(/\\sqrt{([^}]*)}/g, 'sqrt($1)')
                 .replace(/\\sqrt/g, 'sqrt')
+                .replace(/\\frac\(([^)]*)\)\(([^)]*)\)/g, '(($1)/($2))')
+                .replace(/\\frac([^)]*)\(([^)]*)\)/g, '(($1)/($2))')
                 .replace(/\\frac{([^}]*)}{([^}]*)}/g, '(($1)/($2))')
                 .replace(/\\left\(/g, '(')
                 .replace(/\\right\)/g, ')')
                 .replace(/\\cdot/g, '*')
                 .replace(/\\times/g, '*')
+                .replace(/\\pi/g, 'pi')
+                // Remove any remaining LaTeX backslashes
+                .replace(/\\/g, '')
+                // Convert caret to Python power
                 .replace(/\^/g, '**')
-                .replace(/\\pi/g, 'pi');
+                // Replace e with number if not part of a variable (avoid replacing 'exp')
+                .replace(/([^a-zA-Z])e([^a-zA-Z]|$)/g, '$12.71828182846$2');
 
-            // 1. Number followed by variable or function: 2x -> 2*x, 3sin(x) -> 3*sin(x)
-            py = py.replace(/(\d)([a-zA-Z(])/g, '$1*$2');
-            // 2. Variable or closing parenthesis followed by variable or function: xsin(x), )x, x(, )sin(x)
-            py = py.replace(/([a-zA-Z0-9_\)])([a-zA-Z(])/g, '$1*$2');
+            // Add implicit multiplication (2x -> 2*x, xy -> x*y, )x -> )*x)
+            // But do NOT break up function names (sin, cos, etc.)
+            // 1. Number followed by variable (not function): 2x -> 2*x
+            py = py.replace(/(\d)([a-df-hj-mo-qs-zA-DF-HJ-MO-QS-Z])/g, '$1*$2');
+            // 2. Variable followed by variable (not function): xy -> x*y
+            py = py.replace(/([a-df-hj-mo-qs-zA-DF-HJ-MO-QS-Z])([a-df-hj-mo-qs-zA-DF-HJ-MO-QS-Z])/g, '$1*$2');
+            // 3. ) followed by variable or number: )x -> )*x, )2 -> )*2
+            py = py.replace(/\)([a-zA-Z0-9])/g, ')*$1');
+            // 4. Number or variable followed by (: x(y) or 2(y) -> x*(y), 2(y)
+            py = py.replace(/([0-9a-zA-Z])\(/g, '$1*(');
 
-            return py;
+            // Remove asterisks for display if needed (optional, for display only)
+            // py = py.replace(/\s*\*\s*/g, '');
+            // py = py.replace(/([0-9])\*([a-zA-Z])/g, '$1$2');
+
+            return py.trim();
         }
 
         function displayResults(result, funcLatex, mode) {

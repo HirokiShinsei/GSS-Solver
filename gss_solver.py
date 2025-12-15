@@ -1,9 +1,3 @@
-"""
-Golden Section Search (GSS) Optimization Solver
-Author: CS Student
-Description: Implements GSS for finding function minima and generating plots.
-             Designed for a FastAPI backend.
-"""
 
 import numpy as np
 from sympy import symbols, sympify, lambdify
@@ -48,14 +42,14 @@ def golden_section_search(func_str, a, b, tol=1e-4):
     f_x2 = float(func(x2))
 
     while (b - a) > tol and k < 100:
-        k += 1
-        
         iterations.append({
             'k': k, 'a': float(a), 'b': float(b),
             'x1': float(x1), 'x2': float(x2),
             'f_x1': f_x1, 'f_x2': f_x2,
             'interval': float(b - a)
         })
+        
+        k += 1
         
         if f_x1 < f_x2:
             b = x2
@@ -69,16 +63,22 @@ def golden_section_search(func_str, a, b, tol=1e-4):
             f_x1 = f_x2
             x2 = b - golden_ratio * (b - a)
             f_x2 = float(func(x2))
+
             
     x_min = (a + b) / 2
     f_min = float(func(x_min))
-    
+
+    # Optional: Validate result
+    if np.isnan(f_min) or np.isinf(f_min):
+        raise ValueError("Function evaluation resulted in NaN or Inf")
+
     return {
         'x_min': float(x_min),
         'f_min': f_min,
         'iterations': iterations,
-        'num_iterations': k
+        'num_iterations': len(iterations)
     }
+
 
 def create_plot(func_str, bounds, iterations, x_min, f_min):
     """
