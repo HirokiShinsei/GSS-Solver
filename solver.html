@@ -683,7 +683,7 @@
                                 Function f(x)
                             </label>
                             <div class="relative flex items-center">
-                                <!-- Visually hidden input for mobile keyboard support -->
+                                <!-- Visually hidden input for mobile keyboard support (pointer-events only on mobile) -->
                                 <input id="mathInputMobile" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="position:absolute;opacity:0;width:1px;height:1px;left:0;top:0;z-index:0;pointer-events:none;" tabindex="-1" aria-hidden="true">
                                 <span id="mathInput" class="flex-1"></span>
                                 <button type="button" id="clearMathInput" aria-label="Clear input" class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 hover:text-gray-700 rounded-full w-9 h-9 transition-colors focus:outline-none focus:ring-2 focus:ring-gss-blue-accent" style="z-index:2;">
@@ -915,19 +915,27 @@
 
         // Initialize MathQuill when page loads
         $(document).ready(function() {
-                        // Mobile keyboard workaround: focus hidden input on MathQuill focus
-                        const mathInputMobile = document.getElementById('mathInputMobile');
-                        $(document).on('focusin', '.mq-editable-field', function() {
-                            if (mathInputMobile) {
-                                mathInputMobile.focus();
-                            }
-                        });
-                        // On mobile tap, also focus MathQuill if user taps the hidden input
-                        if (mathInputMobile) {
-                            mathInputMobile.addEventListener('focus', function() {
-                                if (mathField) mathField.focus();
-                            });
-                        }
+            // Mobile keyboard workaround: only focus hidden input on mobile
+            const mathInputMobile = document.getElementById('mathInputMobile');
+            function isMobileDevice() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            if (isMobileDevice()) {
+                // Make hidden input interactive on mobile
+                mathInputMobile.style.pointerEvents = 'auto';
+                $(document).on('focusin', '.mq-editable-field', function() {
+                    if (mathInputMobile) {
+                        mathInputMobile.focus();
+                    }
+                });
+                if (mathInputMobile) {
+                    mathInputMobile.addEventListener('focus', function() {
+                        if (mathField) mathField.focus();
+                    });
+                }
+            } else {
+                mathInputMobile.style.pointerEvents = 'none';
+            }
             const MQ = MathQuill.getInterface(2);
             const mathFieldSpan = document.getElementById('mathInput');
             
