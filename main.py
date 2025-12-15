@@ -95,6 +95,7 @@ def solve_function(data: SolverInput):
             "y": y_vals.tolist()
         }
         
+
         # Prepare the response
         response_data = {
             "x_min": result['x_min'],
@@ -103,6 +104,8 @@ def solve_function(data: SolverInput):
             "num_iterations": result['num_iterations'],
             "plot_data": plot_data
         }
+        if 'warning' in result:
+            response_data['warning'] = result['warning']
 
         # Add to session history
         history_entry = {**response_data, "function": data.func_str, "bounds": {"a": data.a, "b": data.b}, "mode": data.mode, "tolerance": data.tol}

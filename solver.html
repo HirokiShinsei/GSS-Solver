@@ -705,7 +705,6 @@
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\pi')">π</button>
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('e')">e</button>
                                     <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\ln()')">ln</button>
-                                    <button type="button" class="quick-insert-btn" onclick="insertSymbol('\\log_{10}()')">log₁₀</button>
                                 </div>
                             </div>
                             
@@ -719,6 +718,10 @@
                                     <div><span class="info-badge">\sqrt</span> then type – Square root</div>
                                     <div><span class="info-badge">\frac</span> then type – Proper fraction</div>
                                     <div><span class="info-badge">\sin</span> <span class="info-badge">\cos</span> Trig functions</div>
+                                    <div><span class="info-badge">ln(x)</span> means natural logarithm (base e).</div>
+                                </div>
+                                <div class="mt-2 text-xs text-blue-500 font-semibold">
+                                    ⚠️ Golden Section Search assumes your function is <b>unimodal</b> in [a, b]. If not, the result may be a local minimum/maximum, not the global one.
                                 </div>
                             </div>
                         </div>
@@ -1055,7 +1058,7 @@
                 .replace(/\\sin/g, 'sin')
                 .replace(/\\cos/g, 'cos')
                 .replace(/\\tan/g, 'tan')
-                .replace(/\\log/g, 'log10')
+                .replace(/\\log/g, 'log')
                 .replace(/\\ln/g, 'log')
                 .replace(/\\sqrt/g, 'sqrt')
                 .replace(/\\frac\(([^)]*)\)\(([^)]*)\)/g, '(($1)/($2))')
@@ -1068,21 +1071,28 @@
                 .replace(/\\pi/g, 'pi')
                 // Remove any remaining LaTeX backslashes
                 .replace(/\\/g, '')
-                // Convert caret to Python power
+                // Convert caret to Python power (multi-digit/nested exponents)
                 .replace(/\^/g, '**')
                 // Replace e with number if not part of a variable (avoid replacing 'exp')
                 .replace(/([^a-zA-Z])e([^a-zA-Z]|$)/g, '$12.71828182846$2');
 
-            // Add implicit multiplication (2x -> 2*x, xy -> x*y, )x -> )*x)
-            // But do NOT break up function names (sin, cos, etc.)
-            // 1. Number followed by variable (not function): 2x -> 2*x
+            // --- Implicit multiplication handling ---
+            // 1. Insert * between number/variable/parenthesis and function (sin, cos, tan, log, sqrt, exp)
+            py = py.replace(/([0-9a-zA-Z)])(sin|cos|tan|log|sqrt|exp)\b/g, '$1*$2');
+            // 2. Insert * between ) and ( (e.g., (x+1)(x-1) -> (x+1)*(x-1))
+            py = py.replace(/\)\(/g, ')*(');
+            // 3. Insert * between number and variable (not function): 2x -> 2*x
             py = py.replace(/(\d)([a-df-hj-mo-qs-zA-DF-HJ-MO-QS-Z])/g, '$1*$2');
-            // 2. Variable followed by variable (not function): xy -> x*y
+            // 4. Insert * between variable and variable (not function): xy -> x*y
             py = py.replace(/([a-df-hj-mo-qs-zA-DF-HJ-MO-QS-Z])([a-df-hj-mo-qs-zA-DF-HJ-MO-QS-Z])/g, '$1*$2');
-            // 3. ) followed by variable or number: )x -> )*x, )2 -> )*2
+            // 5. Insert * between ) and variable/number: )x -> )*x, )2 -> )*2
             py = py.replace(/\)([a-zA-Z0-9])/g, ')*$1');
-            // 4. Number or variable followed by (: x(y) or 2(y) -> x*(y), 2(y)
+            // 6. Insert * between number/variable and (: x(y) or 2(y) -> x*(y), 2(y)
             py = py.replace(/([0-9a-zA-Z])\(/g, '$1*(');
+
+            // Remove accidental * before ** (e.g., x***2 -> x**2)
+            py = py.replace(/\*\*\*/g, '**');
+            py = py.replace(/\*\*+/g, '**');
 
             // Remove asterisks for display if needed (optional, for display only)
             // py = py.replace(/\s*\*\s*/g, '');
@@ -1095,7 +1105,16 @@
             const resultsDiv = document.getElementById('resultsContent');
             const modeText = mode === 'maximize' ? 'Maximum' : 'Minimum';
             
+
+            let warningHtml = '';
+            if (result.warning) {
+                warningHtml = `<div class="mb-4 p-3 rounded-xl bg-yellow-100 border border-yellow-300 text-yellow-900 text-sm font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z" /></svg>
+                    ${result.warning}
+                </div>`;
+            }
             resultsDiv.innerHTML = `
+                ${warningHtml}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="bg-gradient-to-br from-gss-blue-dark/10 to-gss-blue-accent/10 rounded-2xl p-6 border border-gss-blue-accent/20">
                         <div class="text-sm text-gray-600 mb-1">Optimal Point (x*)</div>
