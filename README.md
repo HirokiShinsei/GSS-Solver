@@ -161,11 +161,14 @@ Open `solver.html` in your browser. Enter a function (e.g., `x**2 + 3*x + 2`), s
 
 ## Credits
 
-- Developed by [Your Name/Team].
+- **Joven Carl Rex P. Biaca** — Backend, Cloud, & Integrations
+	- Handles backend architecture, cloud deployment, and system integrations.
+- **Matthew Andrei O. Valencia** — Project Manager & Frontend Developer
+	- Leads project management and develops the frontend interface.
+- **Car A. Torres** — UI/UX Designer & Documentation
+	- Designs user interfaces and prepares project documentation.
+
 - Uses open-source libraries: FastAPI, Uvicorn, Gunicorn, NumPy, SymPy, Matplotlib, Plotly.js, MathQuill, Tailwind CSS.
 
 ---
 
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
