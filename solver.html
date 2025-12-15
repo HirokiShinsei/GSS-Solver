@@ -683,14 +683,17 @@
                                 Function f(x)
                             </label>
                             <div class="relative flex items-center">
-                                <!-- Visually hidden input for mobile keyboard support (pointer-events only on mobile) -->
-                                <input id="mathInputMobile" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="position:absolute;opacity:0;width:1px;height:1px;left:0;top:0;z-index:0;pointer-events:none;" tabindex="-1" aria-hidden="true">
+                                <!-- Mobile/desktop input switch -->
+                                <input id="mathInputMobile" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full glass-input rounded-xl px-4 py-2.5 text-gray-900 font-medium" style="display:none;" placeholder="Enter function, e.g. x^2+3x+1">
                                 <span id="mathInput" class="flex-1"></span>
                                 <button type="button" id="clearMathInput" aria-label="Clear input" class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-500 hover:text-gray-700 rounded-full w-9 h-9 transition-colors focus:outline-none focus:ring-2 focus:ring-gss-blue-accent" style="z-index:2;">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
+                            </div>
+                            <!-- Live LaTeX preview for mobile -->
+                            <div id="mobileLatexPreview" class="mt-2 text-base text-gray-700" style="display:none;"></div>
                             </div>
                             
                             <!-- Quick Insert Buttons -->
@@ -913,98 +916,91 @@
             saveHistoryToStorage();
         }
 
-        // Initialize MathQuill when page loads
+        // Initialize MathQuill and mobile input switching
         $(document).ready(function() {
-            // Improved mobile keyboard workaround: overlay transparent input and sync with MathQuill
             const mathInputMobile = document.getElementById('mathInputMobile');
+            const mathInputSpan = document.getElementById('mathInput');
+            const mobileLatexPreview = document.getElementById('mobileLatexPreview');
             function isMobileDevice() {
                 return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             }
             if (isMobileDevice()) {
-                // Overlay the input on top of MathQuill field
-                mathInputMobile.style.position = 'absolute';
-                mathInputMobile.style.opacity = '0.01';
-                mathInputMobile.style.width = '100%';
-                mathInputMobile.style.height = '100%';
-                mathInputMobile.style.left = '0';
-                mathInputMobile.style.top = '0';
-                mathInputMobile.style.zIndex = '3';
-                mathInputMobile.style.pointerEvents = 'auto';
-                mathInputMobile.tabIndex = 0;
-                // Place input over MathQuill
-                const mathInputSpan = document.getElementById('mathInput');
-                mathInputSpan.style.position = 'relative';
+                // Show mobile input, hide MathQuill
                 mathInputMobile.style.display = 'block';
-                // Sync input value with MathQuill
-                mathInputMobile.value = '';
-                // On MathQuill focus, focus hidden input
-                $(document).on('focusin', '.mq-editable-field', function() {
-                    if (mathInputMobile) {
-                        mathInputMobile.focus();
+                mathInputSpan.style.display = 'none';
+                mobileLatexPreview.style.display = 'block';
+                // Set default value
+                mathInputMobile.value = 'x^4-3x^2+x+1';
+                // Render preview
+                function renderPreview() {
+                    try {
+                        const MQ = MathQuill.getInterface(2);
+                        mobileLatexPreview.innerHTML = '';
+                        MQ.StaticMath(mobileLatexPreview).latex(mathInputMobile.value);
+                    } catch (e) {
+                        mobileLatexPreview.textContent = mathInputMobile.value;
                     }
-                });
-                // On input in hidden field, update MathQuill
-                mathInputMobile.addEventListener('input', function() {
-                    if (mathField) {
-                        // Replace MathQuill content with input value
-                        mathField.latex(mathInputMobile.value);
-                    }
-                });
-                // On MathQuill edit, update hidden input
-                // We'll set this up after mathField is initialized below
-            } else {
-                mathInputMobile.style.pointerEvents = 'none';
-                mathInputMobile.style.display = 'none';
-            }
-            const MQ = MathQuill.getInterface(2);
-            const mathFieldSpan = document.getElementById('mathInput');
-            
-            mathField = MQ.MathField(mathFieldSpan, {
-                spaceBehavesLikeTab: true,
-                leftRightIntoCmdGoes: 'up',
-                restrictMismatchedBrackets: true,
-                autoCommands: 'pi theta sqrt sum prod alpha beta gamma delta',
-                autoOperatorNames: 'sin cos tan sec csc cot sinh cosh tanh ln log exp',
-            });
-            mathField.latex('x^4-3x^2+x+1');
-            mathField.focus();
-            // On MathQuill edit, update hidden input (for mobile)
-            if (isMobileDevice()) {
-                mathField.config({
-                    handlers: {
-                        edit: function() {
-                            mathInputMobile.value = mathField.latex();
-                        }
-                    }
-                });
-            }
-            
-            // Clear input button handler
-            $('#clearMathInput').on('click', function(e) {
-                e.preventDefault();
-                if (mathField) {
-                    mathField.latex('');
-                    mathField.focus();
                 }
-                // Also clear the hidden input on mobile
-                const mathInputMobile = document.getElementById('mathInputMobile');
-                function isMobileDevice() {
-                    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                }
-                if (isMobileDevice() && mathInputMobile) {
+                renderPreview();
+                mathInputMobile.addEventListener('input', renderPreview);
+                // Clear input button handler
+                $('#clearMathInput').on('click', function(e) {
+                    e.preventDefault();
                     mathInputMobile.value = '';
-                }
-            });
-
+                    renderPreview();
+                    mathInputMobile.focus();
+                });
+            } else {
+                // Desktop: show MathQuill, hide mobile input
+                mathInputMobile.style.display = 'none';
+                mathInputSpan.style.display = 'block';
+                mobileLatexPreview.style.display = 'none';
+                const MQ = MathQuill.getInterface(2);
+                mathField = MQ.MathField(mathInputSpan, {
+                    spaceBehavesLikeTab: true,
+                    leftRightIntoCmdGoes: 'up',
+                    restrictMismatchedBrackets: true,
+                    autoCommands: 'pi theta sqrt sum prod alpha beta gamma delta',
+                    autoOperatorNames: 'sin cos tan sec csc cot sinh cosh tanh ln log exp',
+                });
+                mathField.latex('x^4-3x^2+x+1');
+                mathField.focus();
+                // Clear input button handler
+                $('#clearMathInput').on('click', function(e) {
+                    e.preventDefault();
+                    if (mathField) {
+                        mathField.latex('');
+                        mathField.focus();
+                    }
+                });
+            }
             // Load history from localStorage and display
             loadHistoryFromStorage();
             updateHistoryDisplay();
         });
 
         function insertSymbol(latex) {
-            if (mathField) {
-                mathField.write(latex);
-                mathField.focus();
+            const mathInputMobile = document.getElementById('mathInputMobile');
+            function isMobileDevice() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            if (isMobileDevice()) {
+                // Insert at cursor in mobile input
+                const input = mathInputMobile;
+                if (input) {
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+                    const val = input.value;
+                    input.value = val.slice(0, start) + latex + val.slice(end);
+                    input.selectionStart = input.selectionEnd = start + latex.length;
+                    input.dispatchEvent(new Event('input'));
+                    input.focus();
+                }
+            } else {
+                if (mathField) {
+                    mathField.write(latex);
+                    mathField.focus();
+                }
             }
         }
 
@@ -1016,10 +1012,15 @@
         async function runSolver() {
             const button = document.getElementById('runButton');
             const buttonText = document.getElementById('buttonText');
-            
-            // The check for pyodideReady is no longer needed.
-            
-            const funcLatex = mathField.latex();
+            function isMobileDevice() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            let funcLatex;
+            if (isMobileDevice()) {
+                funcLatex = document.getElementById('mathInputMobile').value;
+            } else {
+                funcLatex = mathField.latex();
+            }
             const leftBound = parseFloat(document.getElementById('leftBound').value);
             const rightBound = parseFloat(document.getElementById('rightBound').value);
             const tolerance = parseFloat(document.getElementById('tolerance').value);
@@ -1042,17 +1043,12 @@
 
             button.disabled = true;
             buttonText.textContent = 'Computing...';
-            // The icon is now handled by a loading spinner class, so direct manipulation is removed.
             const originalIconHTML = document.getElementById('buttonIcon').outerHTML;
             document.getElementById('buttonIcon').outerHTML = '<div id="buttonSpinner" class="loading-spinner"></div>';
 
-
             try {
                 let funcStr = latexToPython(funcLatex);
-                
                 console.log('Sending to API. LaTeX:', funcLatex, 'Python:', funcStr);
-
-                // Call the FastAPI backend
                 const response = await fetch(`${API_BASE_URL}/api/solve`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1064,19 +1060,13 @@
                         mode: mode
                     })
                 });
-
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
                 }
-                
                 const result = await response.json();
-                
-                // The backend now handles maximization logic.
                 displayResults(result, funcLatex, mode);
                 plotGraph(result.plot_data, result.iterations, result.x_min, result.f_min, mode);
-                
-                // Add to client-side history
                 addToHistory({
                     function: funcLatex,
                     bounds: { a: leftBound, b: rightBound },
@@ -1087,7 +1077,6 @@
                     num_iterations: result.num_iterations
                 });
                 updateHistoryDisplay();
-
             } catch (error) {
                 alert('Error: ' + error.message);
                 console.error(error);
